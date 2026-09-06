@@ -1,0 +1,49 @@
+schema_version: 1
+project: zolotoy-dev
+snapshot_date: 2026-09-06
+
+services:
+  frontend:
+    repository: Officialsayp/zolotoy-dev-frontend
+    canonical_name: zolotoy-dev-frontend
+    status: implemented
+    public_url: https://zolotoy.dev
+    current_hosting: cloudflare
+    runtime_mode: mock-first
+
+  order:
+    repository: Officialsayp/order-service
+    canonical_name: order-service
+    status: planned
+    public_api_host: order-api.zolotoy.dev
+    internal_port: null
+
+  auth:
+    repository: Officialsayp/auth-service
+    canonical_name: auth-service
+    status: planned
+    public_api_host: auth-api.zolotoy.dev
+    internal_port: null
+
+  notification:
+    repository: Officialsayp/notification-service
+    canonical_name: notification-service
+    status: planned
+    public_api_host: notification-api.zolotoy.dev
+    internal_port: null
+
+  shortener:
+    repository: Officialsayp/url-shortener
+    canonical_name: url-shortener
+    status: planned
+    public_api_host: shortener-api.zolotoy.dev
+    public_redirect_host: s.zolotoy.dev
+    internal_port: null
+
+infrastructure:
+  repository: Officialsayp/zolotoy-dev-infra
+  deployment_status: not-deployed
+  target_provider: Selectel
+  target_runtime: docker-compose-single-vps
+  edge: caddy
+  container_registry: decision-pending
