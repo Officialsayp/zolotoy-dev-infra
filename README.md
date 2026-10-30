@@ -92,6 +92,7 @@ first production workflow is added.
 - [Guarded reviewed Nginx configuration restore](docs/runbooks/nginx-reviewed-restore.md)
 - [Offline Certbot/systemd recovery evidence](docs/runbooks/certbot-systemd-recovery.md)
 - [Offline Restic backup wrapper and credential dependency review](docs/runbooks/restic-wrapper-dependency-review.md)
+- [Independent macOS Restic access check (no-lock, no secrets in logs)](docs/runbooks/independent-macos-restic-restore.md)
 - [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
