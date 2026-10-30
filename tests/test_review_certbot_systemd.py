@@ -133,6 +133,9 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
     def test_failures_only_keeps_unknown_exec_out_of_failed_checks(self):
         result = review.summarize(self.run_review())
         self.assertEqual(result["failed_known_checks"], [])
+        self.assertEqual(result["webroot_evidence_sources"], {
+            "webroot_map": 0, "webroot_path": 5, "missing": 0,
+        })
         self.assertEqual(
             result["unresolved_manual_reviews"],
             ["systemd.execstart.maxzolotoy-restic-check"],
