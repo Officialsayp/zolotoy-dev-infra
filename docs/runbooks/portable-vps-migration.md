@@ -53,6 +53,18 @@ This is another **operator-provided read-only observation**, not a renewal simul
 - A read-only `gzip -t` verification of this exact local `recovery.tar.gz` returned **PASS**. Archive enumeration confirms `var/www/maxzolotoy/`: **37 regular files and 1 symlink**; `var/www/zolotoy-dev-production/`: **219 regular files and 1 symlink**; `var/www/zolotoy-dev/` (staging): **0 files, 0 symlinks, 0 directories**. This checks compressed-stream integrity and entry presence only; symlink destinations, manifest SHA-256, exact content, and isolated extraction remain unverified.
 - Investigate whether staging is intentionally excluded and fully reproducible by the existing frontend staging workflow, including its active `current` symlink and Nginx route. Prioritize independent **off-site Restic snapshot discovery, read-only listing and a separate-directory restore**; no changes to production symlinks or runtime services.
 
+### Recovery implementation review (owner-supplied source excerpt, 2026-10-31)
+
+The observed `site-recovery.py` lines 125–210 confirm:
+
+- `offsite()` builds a **new local recovery set**, checks its SHA-256 against the manifest, then runs Restic `backup --json --tag site-recovery-v1` on the **recovery-set root** plus `/var/backups/maxzolotoy` and `/var/backups/zolotoy-dev-production`. It parses the resulting snapshot ID and records success only when that ID exists; local rotation occurs afterward.
+- `rotate()` validates each existing local recovery set's schema, tarball length and SHA-256 before deleting oldest completed sets beyond the retained 14; legacy backup archives are not deleted by this function.
+- `restic(*args)` starts a subprocess that sources `/root/.config/restic/maxzolotoy.env` without tracing, then executes `restic -o s3.bucket-lookup=dns -o s3.region=ru-1` using the passed arguments. The wrapper itself must never be copied into a public example with actual environment contents.
+- `check` calls `restic check --read-data`, consistent with journal lines reporting a full data check. The code uses the `/run/lock/site-recovery.lock` lock in `main()`.
+- This confirms meaningful operational guardrails and **what is uploaded**, but not a complete disaster-recovery rehearsal. Backup scope inside `local()` requires additional review (its body was not supplied); staging is absent from the inspected recovery archive.
+
+**Next prioritized acceptance test:** verify the exact logged off-site snapshot `cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e` exists with tag `site-recovery-v1`; restore **only** `/var/backups/site-recovery/20261030T211925.555690Z` from that snapshot into a new temporary `0700` directory under `/var/tmp`; validate restored `recovery.tar.gz` SHA-256 and bytes against the **restored** `manifest.json` and verify gzip integrity; then securely remove the isolated copy. Do not restore into `/`, touch live `current` links, modify Nginx or credentials, run `restic forget/prune`, or use `latest` instead of the reviewed snapshot ID. This test is read-only with respect to the Restic repository and production paths, but it creates and removes temporary files on the source VPS; passing it does not prove cross-provider bare-metal restore.
+
 Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
 
 Next read-only validation priorities: inspect only the metadata and category coverage of the newest
