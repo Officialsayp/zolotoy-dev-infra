@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 2
       - name: Validate documentation, links, inventory safety and secret-file rules
         run: python3 scripts/check_docs.py
       - name: Check whitespace errors in latest change
