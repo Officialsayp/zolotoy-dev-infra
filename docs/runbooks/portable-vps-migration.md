@@ -27,6 +27,19 @@ The owner supplied read-only terminal output from the current Selectel VPS on 20
 - The previously documented `zolotoy-dev-certificate.timer` was **not present in the supplied
   filtered timer listing**. The current renewal mechanism for every domain must be established.
 
+### TLS and backup evidence from owner-supplied VPS output (2026-10-31)
+
+This is another **operator-provided read-only observation**, not a renewal simulation, a public-network verification or a restore drill:
+
+- `sudo certbot certificates` lists five valid separate ECDSA Let's Encrypt certificates: `maxzolotoy.com`, `www.maxzolotoy.com`, `origin.maxzolotoy.com`, `zolotoy.dev`, `origin.zolotoy.dev`, each expiring 2027-01-28 at approximately 19:29–19:30 UTC.
+- Local loopback HTTPS SNI checks on Nginx port 443 showed matching certificate subjects/SANs and expiry dates for all five hostnames. This does **not** establish that external DNS or remote network access works.
+- `certbot.timer` is enabled. `certbot.service` reported Result=success and exit code 0, but no execution timestamp in the supplied output. An automated renewal and certificate installation into Nginx have **not** yet been proven by the timer.
+- Legacy `zolotoy-dev-certificate.timer` is disabled; this is consistent with an intended migration away from its previous lego-based renewal, but verify Certbot covers the corresponding domain before treating it as decommissioned.
+- `maxzolotoy-offsite-backup.service` and `maxzolotoy-restic-check.service` reported Result=success on 2026-10-30 at ~21:19 UTC. This proves successful service exits, **not** existence/contents of an up-to-date off-site snapshot or a successful restore.
+- `maxzolotoy-config-backup.timer` is disabled. Investigate whether configuration archives are generated inside another enabled backup job; do not enable it blindly or assume the off-site snapshot contains current Nginx, Certbot, systemd, users, or other site configuration.
+
+Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
+
 Next read-only validation priorities: `certbot certificates` or equivalent active certificate
 inventory (without private keys); public TLS certificate expiry/SAN check for each domain; Certbot
 renewal configuration and last-success logs; latest successful backup snapshot and an isolated
