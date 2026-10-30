@@ -17,7 +17,8 @@ The [Nginx configuration tool](../../scripts/restore_nginx.py) only supports
 privately staged* recovery archive. **Other configuration remains separate**:
 
 - Let's Encrypt/Certbot certificates, private keys, renewal configs and webroot:
-  manual authorized secret recovery and version-aware installation; never
+  follow the [offline Certbot/systemd recovery review](certbot-systemd-recovery.md)
+  before manual authorized secret recovery and version-aware installation; never
   export PEM keys in GitHub or CI artifacts.
 - systemd units/timers and firewall configuration: review actual dependencies,
   permissions and command paths before a separate, approved installation.
