@@ -63,14 +63,16 @@ The observed `site-recovery.py` lines 125–210 confirm:
 - `check` calls `restic check --read-data`, consistent with journal lines reporting a full data check. The code uses the `/run/lock/site-recovery.lock` lock in `main()`.
 - This confirms meaningful operational guardrails and **what is uploaded**, but not a complete disaster-recovery rehearsal. Backup scope inside `local()` requires additional review (its body was not supplied); staging is absent from the inspected recovery archive.
 
-**Next prioritized acceptance test:** verify the exact logged off-site snapshot `cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e` exists with tag `site-recovery-v1`; restore **only** `/var/backups/site-recovery/20261030T211925.555690Z` from that snapshot into a new temporary `0700` directory under `/var/tmp`; validate restored `recovery.tar.gz` SHA-256 and bytes against the **restored** `manifest.json` and verify gzip integrity; then securely remove the isolated copy. Do not restore into `/`, touch live `current` links, modify Nginx or credentials, run `restic forget/prune`, or use `latest` instead of the reviewed snapshot ID. This test is read-only with respect to the Restic repository and production paths, but it creates and removes temporary files on the source VPS; passing it does not prove cross-provider bare-metal restore.
+**Isolated remote restore acceptance test: PASSED, operator-reported 2026-10-31.** On the current VPS, Restic discovered the exact snapshot `cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e` with tag `site-recovery-v1`. An isolated `restic restore` of `/var/backups/site-recovery/20261030T211925.555690Z` to a temporary `/var/tmp` directory reported `PASS`: all four required files restored, `recovery.tar.gz` matched the restored manifest SHA-256 and the original local manifest SHA-256, byte count matched, and `gzip -t` passed. The test script exited successfully and reported temporary-directory cleanup. No production paths, Nginx services or DNS were intentionally modified. These findings are based on output supplied by the operator; no independent remote inspection was performed.
+
+**Proven scope:** the encrypted off-site Restic repository was accessible **from the original host using its existing credentials**, the named remote snapshot was retrievable, and the four-file recovery set was internally consistent after extraction into a temporary directory. **Unproven:** clean-host bootstrap and secret retrieval after loss of the original VPS; tarball extraction/installation with all file permissions and symlink targets; actual serving of both restored websites; staging recreation; successful unattended Certbot renewal; GitHub Actions deployment against a replacement host; DNS cutover and rollback. Removing a temporary directory is not a cryptographic erasure guarantee. Do not restore into `/`, modify production `current` links or run `restic forget/prune` during a rehearsal.
 
 Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
 
-Next read-only validation priorities: inspect only the metadata and category coverage of the newest
-recovery archive and its manifest without exposing secrets; verify local archive permissions; compare
-against an actual Restic off-site snapshot's file inventory; test restore in an isolated destination;
-check Certbot renewal hooks and public challenge reachability, DNS/proxy mode and public TLS checks. Do not publish
+Next acceptance priorities: prove the Restic repository URL, repository password and S3 access
+credentials can be retrieved securely from outside the original VPS without posting them to GitHub;
+perform a clean-host bootstrap and restore rehearsal with both production websites and staging;
+verify Certbot unattended renewal, public HTTPS/DNS, CI/CD deployment and rollback. Do not publish
 unredacted configuration, credential files, or private keys.
 
 The existing 1 GiB/10 GiB host is suitable only for the currently observed lightweight web
