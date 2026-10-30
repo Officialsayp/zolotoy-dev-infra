@@ -88,6 +88,7 @@ first production workflow is added.
 - [Backup and restore plan](docs/backups.md)
 - [Bootstrap Selectel runbook](docs/runbooks/bootstrap-selectel.md)
 - [Gated web VPS Ansible bootstrap](docs/runbooks/web-vps-bootstrap.md)
+- [Offline recovery archive validation and private staging](docs/runbooks/recovery-archive-staging.md)
 - [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
@@ -105,6 +106,8 @@ python scripts/check_docs.py
 python3 -m venv .venv
 .venv/bin/python -m pip install -r iac/requirements.txt
 .venv/bin/ansible-playbook --syntax-check iac/web-baseline.yml
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 -m py_compile scripts/recovery_archive.py
 git diff --check
 ```
 
