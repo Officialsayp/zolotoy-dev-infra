@@ -145,7 +145,7 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         data, mode, uid = files[name]
         files[name] = (data.replace(b"/var/lib/letsencrypt", b"/tmp/wrong"), mode, uid)
         hook, hook_mode, hook_uid = files[review.HOOK]
-        files[review.HOOK] = (hook.replace(b"set -eu\\n", b""), hook_mode, hook_uid)
+        files[review.HOOK] = (hook.replace(b"set -eu\n", b""), hook_mode, hook_uid)
         report = review.summarize(self.run_review(files, links))
         self.assertIn(
             "certbot.renewal_profiles.zolotoy.dev.expected_webroot",
