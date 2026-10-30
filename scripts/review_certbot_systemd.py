@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -25,11 +26,16 @@ CERT_NAMES = (
     "origin.zolotoy.dev",
 )
 HOOK = "etc/letsencrypt/renewal-hooks/deploy/20-nginx-reload"
-# Only the offsite wrapper ExecStart is established by owner-provided evidence.
-# The Restic-check ExecStart was NOT provided: never invent its script path.
+# Observed by the operator from a SHA-256-verified recovery archive:
+# - Restic-check service has exactly one ExecStart
+# - it directly names an archived executable under /usr/local/sbin
+# - its basename is maxzolotoy-restic-check
+# - its archived copy is root-owned and executable
+# - live and archived service files match byte-for-byte
+# This only establishes binary identity, not wrapper behavior or runtime success.
 BACKUP_SERVICES = {
     "maxzolotoy-offsite-backup": "usr/local/sbin/maxzolotoy-offsite-backup",
-    "maxzolotoy-restic-check": None,
+    "maxzolotoy-restic-check": "usr/local/sbin/maxzolotoy-restic-check",
 }
 CONFIG_LIMIT = 128 * 1024
 
@@ -124,6 +130,24 @@ def inspect_webroot(text: str | None, domain: str) -> tuple[str, bool]:
 
 def owner_and_mode(member: tarfile.TarInfo) -> bool:
     return member.uid == 0 and member.gid == 0 and (member.mode & 0o022) == 0
+
+
+def execstart_binary_matches(value: str | None, script_path: str) -> tuple[bool, bool]:
+    """Match a literal absolute executable (not a command substring).
+
+    The second flag indicates whether additional argv tokens require a separate
+    human review. Never print or execute arguments.
+    """
+    if not value:
+        return False, False
+    try:
+        args = shlex.split(value)
+    except ValueError:
+        return False, False
+    if not args:
+        return False, False
+    executable = args[0].lstrip("-+!@:")
+    return executable == "/" + script_path, len(args) > 1
 
 
 def static_hook_checks(text: str | None) -> dict[str, bool]:
@@ -248,6 +272,10 @@ def review(recovery_set: Path) -> dict[str, Any]:
             timer_settings = section_values(
                 timer_text, "Timer", ("OnCalendar", "OnBootSec", "OnUnitActiveSec")
             ) if timer_text is not None else {}
+            expected_binary, extra_args = (
+                execstart_binary_matches(svc_settings.get("ExecStart"), script_path)
+                if script_path else (False, False)
+            )
             units.append({
                 "unit": unit,
                 "service_regular_file": bool(service and service.isfile()),
@@ -255,14 +283,16 @@ def review(recovery_set: Path) -> dict[str, Any]:
                 "service_safe_owner_mode": bool(service and service.isfile() and owner_and_mode(service)),
                 "timer_safe_owner_mode": bool(timer and timer.isfile() and owner_and_mode(timer)),
                 "execstart_present": bool(svc_settings.get("ExecStart")),
-                # Null means source evidence is insufficient, NOT a match.
-                "service_references_expected_script": (
-                    script_path in svc_settings.get("ExecStart", "") if script_path else None
+                "service_references_expected_script": expected_binary,
+                "script_regular_file": bool(executable and executable.isfile()),
+                "script_root_owned_safe_mode": bool(
+                    executable and executable.isfile() and owner_and_mode(executable)
                 ),
-                "script_regular_file": (
-                    bool(executable and executable.isfile()) if script_path else None
+                "script_executable": bool(
+                    executable and executable.isfile() and executable.mode & 0o111
                 ),
-                "execstart_requires_manual_review": script_path is None,
+                "execstart_additional_arguments_present": extra_args,
+                "execstart_requires_manual_review": script_path is None or extra_args,
                 "has_timer_schedule": bool(timer_settings),
             })
         result["systemd"]["backup_units"] = units
@@ -292,6 +322,7 @@ def review(recovery_set: Path) -> dict[str, Any]:
     )
     known_script_checks_ok = all(
         u["service_references_expected_script"] and u["script_regular_file"]
+        and u["script_root_owned_safe_mode"] and u["script_executable"]
         for u in units if not u["execstart_requires_manual_review"]
     )
     unresolved_exec = [
@@ -340,7 +371,10 @@ def summarize(result: dict[str, Any]) -> dict[str, Any]:
                 failed.append(f"systemd.backup_units.{name}.{key}")
         # Explicitly null=unreviewed for unknown ExecStart; never call it failed.
         if not unit["execstart_requires_manual_review"]:
-            for key in ("service_references_expected_script", "script_regular_file"):
+            for key in (
+                "service_references_expected_script", "script_regular_file",
+                "script_root_owned_safe_mode", "script_executable",
+            ):
                 if unit.get(key) is not True:
                     failed.append(f"systemd.backup_units.{name}.{key}")
     for key in ("unit_state_inventory_present", "package_inventory_present"):
@@ -365,7 +399,7 @@ def summarize(result: dict[str, Any]) -> dict[str, Any]:
             f"systemd.execstart.{name}"
             for name in result["systemd"]["execstart_manual_review_needed_for"]
         ],
-        "note": "This is a static archive audit, not certificate renewal or restore approval",
+        "note": "Checks archived executable identity and mode only; not script content or runtime success",
     }
 
 
