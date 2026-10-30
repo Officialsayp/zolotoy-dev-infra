@@ -33,8 +33,9 @@ artifacts when they can be validated against real service contracts and health e
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
   stretch goal, not a prerequisite.
-- Prefer Caddy for the initial TLS/reverse-proxy edge to reuse the operational model already proven in
-  `Officialsayp/saypix`; do not copy unrelated IPs/domains/secrets from that project.
+- Select the edge after checking the currently installed VPS: source repositories contain both Caddy
+  and Nginx profiles. Reuse the verified active edge, TLS renewal and rollback contract; do not copy
+  unrelated IPs/domains/secrets or migrate the web server merely for consistency.
 - Keep only edge ports public. Databases, Redis, Kafka, internal metrics and admin tooling stay on
   private/internal networks unless explicitly justified.
 - Service repositories remain independently runnable. This repo consumes built images; it does not
