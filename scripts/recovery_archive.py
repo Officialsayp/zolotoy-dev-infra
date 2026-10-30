@@ -17,6 +17,7 @@ import stat
 import sys
 import tarfile
 from collections import Counter
+import json
 from pathlib import Path, PurePosixPath
 
 MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
@@ -176,6 +177,111 @@ def verify_set(directory: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], Coun
         raise RecoveryError("Archive cannot be fully verified") from exc
 
 
+def diagnose_symlinks(directory: Path) -> dict:
+    """Safe, aggregate-only report; NEVER grants permission to extract.
+
+    Validates the compressed archive hash first, then reads tar headers only.
+    Raw member names, link destinations and secret file contents are never printed.
+    """
+    if directory.is_symlink() or not directory.is_dir():
+        raise RecoveryError("Recovery-set directory is missing or a symlink")
+    manifest = read_manifest(directory)
+    archive = directory / "recovery.tar.gz"
+    if not regular_file(archive) or archive.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise RecoveryError("Archive missing, non-regular or oversized")
+    if archive.stat().st_size != manifest["bytes"] or digest_file(archive) != manifest["sha256"]:
+        raise RecoveryError("Archive SHA-256/size mismatch")
+
+    members: set[str] = set()
+    symlinks: list[tuple[str, str]] = []
+    malformed_member_names = 0
+    count = 0
+    with tarfile.open(archive, "r:gz") as source:
+        for entry in source:
+            count += 1
+            if count > MAX_MEMBERS:
+                raise RecoveryError("Too many archive entries")
+            try:
+                member_name = normalize_path(entry.name)
+                if member_name:
+                    members.add(member_name)
+            except RecoveryError:
+                malformed_member_names += 1
+            if entry.issym():
+                symlinks.append((entry.name, entry.linkname))
+
+    # Existing tar archives often omit explicit directory records.
+    # Count a path as present only if a member exists at or below it.
+    def in_archive(path: str) -> bool:
+        return path in members or any(x.startswith(path + "/") for x in members)
+
+    def scope(name: str) -> str:
+        if name.startswith("etc/nginx/"):
+            return "nginx"
+        if name.startswith("etc/letsencrypt/"):
+            return "letsencrypt"
+        if name.startswith("etc/systemd/"):
+            return "systemd"
+        if name.startswith("var/www/"):
+            return "website"
+        return "other"
+
+    categories: dict[str, Counter] = {}
+    overall: Counter = Counter()
+    for name, target in symlinks:
+        try:
+            normalized_name = normalize_path(name)
+            name_valid = bool(normalized_name)
+        except RecoveryError:
+            normalized_name = ""
+            name_valid = False
+
+        if not name_valid:
+            status = "unsafe_member_name"
+        elif not target or "\\" in target or "\x00" in target:
+            status = "malformed_target"
+        elif target.startswith("/"):
+            parts = PurePosixPath(target).parts
+            if ".." in parts or target.startswith("//"):
+                status = "malformed_absolute_target"
+            else:
+                resolved = posixpath.normpath(target).lstrip("/")
+                status = (
+                    "absolute_target_in_archive" if resolved and in_archive(resolved)
+                    else "absolute_target_not_in_archive"
+                )
+        else:
+            resolved = posixpath.normpath(
+                posixpath.join(posixpath.dirname(normalized_name), target)
+            )
+            if resolved in (".", "..") or resolved.startswith("../"):
+                status = "relative_target_escapes_root"
+            else:
+                status = (
+                    "relative_target_in_archive" if in_archive(resolved)
+                    else "relative_target_not_in_archive"
+                )
+        overall[status] += 1
+        group = scope(name)
+        categories.setdefault(group, Counter())[status] += 1
+
+    return {
+        "schema": 1,
+        "mode": "symlink-diagnostics-only",
+        "archive_sha256_and_size": "pass",
+        "archive_safe_for_staging": False,
+        "members_scanned": count,
+        "malformed_member_names": malformed_member_names,
+        "symlinks_total": len(symlinks),
+        "symlink_target_categories": dict(sorted(overall.items())),
+        "by_source_group": {
+            group: dict(sorted(values.items()))
+            for group, values in sorted(categories.items())
+        },
+        "note": "No extraction or live-path changes; raw link paths/targets withheld",
+    }
+
+
 def validate_stage_target(path: Path) -> Path:
     if not path.is_absolute() or path.exists() or path.is_symlink():
         raise RecoveryError("Stage target must be a new, absolute directory")
@@ -230,6 +336,10 @@ def stage(directory: Path, destination: Path, records: list[tuple[tarfile.TarInf
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("recovery_set", type=Path, help="Directory containing manifest.json and recovery.tar.gz")
+    parser.add_argument(
+        "--diagnose-symlinks", action="store_true",
+        help="Read-only aggregate symlink diagnosis; never approves staging",
+    )
     parser.add_argument("--stage-dir", type=Path, help="NEW private destination below /tmp or /var/tmp")
     parser.add_argument(
         "--acknowledge-sensitive-data",
@@ -238,6 +348,11 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
+        if args.diagnose_symlinks:
+            if args.stage_dir or args.acknowledge_sensitive_data:
+                raise RecoveryError("Diagnosis cannot be combined with staging")
+            print(json.dumps(diagnose_symlinks(args.recovery_set), indent=2, sort_keys=True))
+            return 0
         if bool(args.stage_dir) != args.acknowledge_sensitive_data:
             raise RecoveryError("--stage-dir and --acknowledge-sensitive-data must be used together")
         records, counts = verify_set(args.recovery_set)
