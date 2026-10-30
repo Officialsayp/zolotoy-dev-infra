@@ -35,19 +35,26 @@ Checks include:
 - Presence of live certificate/fullchain/private-key paths, without reading keys.
 - Presence, archived owner/mode, executable bit, POSIX syntax and expected
   guarded nginx syntax-check/reload lines in the deploy hook.
-- Presence of the two expected backup-service/timer pairs, service ExecStart
-  directives and schedule directives. Only the off-site backup wrapper path has
-  been confirmed from operator-supplied source evidence; the Restic-check
-  service's exact ExecStart remains **unknown** and must not be guessed. The
-  report therefore marks that execution contract as requiring manual review.
+- Presence of the two expected backup-service/timer pairs and their schedules.
+  Owner-supplied read-only inspection confirmed the `maxzolotoy-restic-check`
+  service's direct executable is `/usr/local/sbin/maxzolotoy-restic-check`.
+  The exact archived/live service file matched byte-for-byte, and the wrapper
+  is in the archive, root-owned, and executable. The updated inspector checks
+  that specific executable path (not substring presence), regular-file type,
+  ownership, non-writable permissions and executable bit. Any extra ExecStart
+  arguments remain subject to separate manual review; wrapper *contents* and
+  runtime dependencies are not validated by this narrow check.
 - Presence (not full cryptographic verification) of separately saved package and
   systemd-state inventories.
 
 **A complete static review is not proof of a successful renewal or restoration.**
 The report distinguishes known_scope_checks_pass from static_review_complete.
-Because the actual Restic-check service ExecStart has not been established,
-static_review_complete remains false until the execution contract is reviewed
-separately. The report always sets safe_to_apply_without_further_review to false.
+The Restic-check executable path is now established from an archived unit
+matching the live unit. `static_review_complete` may become `true` if the
+allowlisted checks pass and no unreviewed ExecStart arguments remain. This
+does **not** mean the wrapper's internal commands, environment, backup
+credentials, external packages or network operations were validated.
+The report always sets `safe_to_apply_without_further_review` to `false`.
 The hook check also requires the *entire* expected six-line shell program,
 including set -eu, not merely isolated matching commands.
 Some unit names and backup script paths are based on earlier owner-provided
@@ -86,9 +93,9 @@ operating-system level.
 Expected review fields include `recovery_archive_hash_and_structure: pass-metadata-only`,
 `known_scope_checks_pass`, `static_review_complete`,
 `safe_to_apply_without_further_review: false`, plus per-domain and per-unit
-Booleans. `static_review_complete: false` is presently expected because the
-exact Restic-check service `ExecStart` has not been confirmed. Any additional
-false or missing values should be classified, **not** auto-corrected on the
+Booleans. The Restic-check service's direct executable has now been
+identified by the owner. Any unexpected `ExecStart` arguments or other
+failed/unknown fields should be classified, **not** auto-corrected on the
 production VPS. Save only the redacted report or paste the summarized JSON
 after personally checking it for sensitive content.
 
@@ -132,6 +139,24 @@ handles both forms, keeps map precedence, and rejects conflicting values.
 archive. Repeat only the read-only `--failures-only` command from the exact
 CI-verified commit. A successful static comparison still does **not** prove
 unattended ACME renewal, DNS reachability or correct Nginx challenge delivery.
+
+## Real systemd unit executable identity (2026-10-31)
+
+The owner inspected the **real SHA-256-matched archive**, without printing the
+raw unit or invoking systemd. The archived `maxzolotoy-restic-check.service`
+was shown to match the active VPS unit **byte-for-byte** and to have one
+`ExecStart`. The extracted executable basename was
+`maxzolotoy-restic-check`; the command referred to an absolute archived
+`/usr/local/sbin` program with the same name. That archived file was
+root-owned and had an executable bit. This resolves the previously unknown
+**entry-point identity**, not the script's contents or its behavior.
+
+The inspector now recognizes both observed wrappers. It does not open or
+execute the Restic wrapper scripts, evaluate environment variables, prove
+Restic credentials are independently recoverable, or verify successful
+execution on a clean Ubuntu host. Any `static_review_complete=true`
+applies only to the explicitly listed static predicates and does **not**
+authorize installation, enabling timers or merging operational changes.
 
 ## Controlled Certbot restoration — separate operator approval required
 
