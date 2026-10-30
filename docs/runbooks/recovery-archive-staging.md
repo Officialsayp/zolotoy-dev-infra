@@ -97,7 +97,7 @@ malicious tar entries without touching S3, real secrets or the VPS.
 3. Restore the selected snapshot into an isolated directory, inspect its
    reviewed configuration, file ownership, symlink targets and secret policies.
    Only then install active site configuration under separate authorization.
-4. Confirm both production sites, staging rebuild, Nginx/Cerbot TLS,
+4. Confirm both production sites, staging rebuild, Nginx/Certbot TLS,
    GitHub Actions deployments and rollback before any DNS cutover.
 
 See [web VPS Ansible bootstrap](web-vps-bootstrap.md) and
