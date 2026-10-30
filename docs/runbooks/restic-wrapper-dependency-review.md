@@ -1,8 +1,10 @@
 # Restic backup wrapper dependency review — protected offline evidence
 
-Status (2026-10-31): **read-only static inspector and synthetic CI tests**.
-The new script has not been run against the real Selectel recovery archive or
-tested on a replacement VPS. It does not execute or install any archive scripts.
+Status (2026-10-31): **read-only static inspector, synthetic CI tests and
+an operator-confirmed audit of the real protected Selectel archive**.
+The inspection passed its narrow file metadata checks. No wrapper scripts,
+Restic commands or production services were executed by this tool. It is
+not a replacement-VPS rehearsal.
 
 ## Confirmed context
 
@@ -55,6 +57,47 @@ Every report explicitly sets:
 - wrapper_behavior_or_runtime_verified = false
 - separate_off_host_s3_and_restic_credentials_verified = false
 - safe_to_run_or_restore_without_manual_review = false
+
+## Real protected archive — operator-reported result (2026-10-31)
+
+The owner ran `review_backup_wrappers.py` on Recovery Set
+`20261030T211925.555690Z`, from CI-passing commit
+`adff16c4640708df3d6681082c9a7c4462193a4d`.
+Observed read-only output:
+
+- `archive_sha256_and_structure: pass-metadata-only`
+- `wrapper_file_metadata_checks_pass: true`
+- All **three** allowlisted script members were regular, readable, executable,
+  root-owned and not group/world writable. Interpreters:
+  `offsite_backup=posix-shell`, `restic_check=posix-shell`,
+  `site_recovery=python3`.
+- Both shell wrappers lexically mention `site-recovery.py`. The check wrapper
+  also lexically mentions a check operation. The Python script lexically
+  mentions Restic, a Restic environment filename, locking, snapshot/check
+  operations and deletion/rotation-related tokens. These are **textual
+  indicators only**, not verified commands or a call graph.
+- `restic_credential_env_file_in_archive: false`. The known Restic
+  environment path is **not packaged as a regular file** in this Recovery Set.
+  This may be an intentional secret-exclusion policy. It must NOT be
+  interpreted as a missing/failed backup without separate secret custody
+  evidence.
+- `wrapper_behavior_or_runtime_verified: false`,
+  `separate_off_host_s3_and_restic_credentials_verified: false`,
+  `safe_to_run_or_restore_without_manual_review: false`; exit code 0.
+
+**Critical independent-recovery gap:** The operator demonstrated the encrypted
+offsite snapshot is retrievable **from the original server using its existing
+credentials**, not independently from a different environment. A total server
+loss also removes access to any Restic password or S3 key stored exclusively
+under /root. Before a clean-host rehearsal, establish that both independent
+credential sets are securely recoverable, without committing or printing them.
+
+**Next safe evidence:** Check existence, non-symlink type, owner/mode of the
+live credential environment file **without opening it**, and compare the three
+live wrapper files against their exact archived copies using digests only.
+Do not print hashes, source text, command lines or environment variable
+values. A matching script copy is evidence of snapshot fidelity, but does not
+prove execution correctness or a successful restore.
 
 ## Off-host credential recovery must be proven separately
 
