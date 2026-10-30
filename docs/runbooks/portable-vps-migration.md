@@ -55,7 +55,7 @@ Redact secrets and private operator data before sharing diagnostics. Preserve ve
 
 ## 4. TLS, CI/CD and website recovery
 
-- Verify actual renewal implementation for each hostname. zolotoy.dev uses a .dev domain with HSTS preload; obtain working HTTPS before DNS cutover. Certificate keys should be re-issued if compromise is suspected.
+- Verify the actual certificate issuance and renewal mechanism for each hostname. zolotoy.dev uses a .dev domain with HSTS preload: valid HTTPS must work before public cutover. **HTTP-01 alone usually cannot issue a certificate for the new host while public DNS still points to the old host.** Prefer a verified DNS-01 procedure where supported, or securely reuse an existing valid certificate/key under strict permissions and explicitly set up renewal on the replacement host. Check SAN/hostname coverage and avoid simultaneously competing ACME renewals. Certificate keys must be replaced if compromise is suspected.
 - Reconfigure GitHub Environment deploy host, user, verified SSH host key and private key **out of band**. Retain current concurrency locks, protected branches and environment approvals. Freeze simultaneous old/new deploys during cutover.
 - Deploy saypix through its tested atomic-release workflow. Preserve its language routing, apex/www redirects, cache/security headers, health endpoints, and site-specific backup/rotation timers.
 - Deploy frontend through the already tested exact-artifact Selectel workflow, keeping production and staging separate. Check canonical pages, RU/EN, /demo/ nested routes, MSW assets, sitemap/robots and release/health endpoints.
