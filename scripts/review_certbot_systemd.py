@@ -201,12 +201,14 @@ def review(recovery_set: Path) -> dict[str, Any]:
         cert_paths: list[dict[str, Any]] = []
         for name in CERT_NAMES:
             conf = members.get(f"etc/letsencrypt/renewal/{name}.conf")
-            options = section_values(
-                limited_text(archive, conf), "renewalparams", ("authenticator", "webroot_path")
-            ) if conf and conf.isfile() and conf.size <= CONFIG_LIMIT else {}
-            webroot_source, expected_webroot = inspect_webroot(
-                limited_text(archive, conf) if conf and conf.isfile() else None, name
+            config_text = (
+                limited_text(archive, conf) if conf and conf.isfile() else None
             )
+            options = (
+                section_values(config_text, "renewalparams", ("authenticator",))
+                if config_text is not None else {}
+            )
+            webroot_source, expected_webroot = inspect_webroot(config_text, name)
             profiles.append({
                 "name": name,
                 "present": bool(conf and conf.isfile()),
