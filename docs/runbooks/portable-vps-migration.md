@@ -79,6 +79,32 @@ The existing 1 GiB/10 GiB host is suitable only for the currently observed light
 workloads without a measured capacity assessment. Do **not** assume it can host Kafka, PostgreSQL,
 Redis, monitoring and four Go services simultaneously. Size a replacement based on real needs.
 
+## Certbot timer, deploy hook and staging evidence (owner output, 2026-10-31)
+
+A later read-only inspection showed:
+
+- `certbot.service` calls `/usr/bin/certbot -q renew --no-random-sleep-on-renew`.
+  The observed service start/stop timestamps are `[n/a]`, while `certbot.timer`
+  has a scheduled next run of **2026-10-31 04:32:14 UTC** and no reported `LAST`.
+  This confirms the schedule, **not** a completed automatic renewal or service reload.
+- A deploy-hook file exists at
+  `/etc/letsencrypt/renewal-hooks/deploy/20-nginx-reload`. Individual renewal
+  profiles do not define `deploy_hook`; the hook directory is a separate supported
+  mechanism. **The hook's executable bit, contents, syntax and actual execution have
+  not yet been verified**. Do not execute it solely to inspect it.
+- `/var/www/zolotoy-dev/releases/current` is an existing symlink pointing to an
+  existing directory. This confirms staging files currently exist, **not** that
+  they are included in recovery archives (they are absent from the inspected archive)
+  or externally reachable. The existing manual staging GitHub Actions workflow can
+  rebuild the artifact after a clean-host re-provisioning, but this has not been
+  rehearsed.
+
+Next safe check: inspect permissions and non-secret logic of the deploy hook;
+check its syntax and effective systemd journal status. Separately, verify staging
+is recoverable through its documented manual deploy without changing production.
+A Certbot renewal dry-run or hook invocation should be a separately approved test;
+it is not equivalent to a proven unattended renewal.
+
 ## Historical Caddy PR guard (2026-10-31)
 
 The frontend repository currently has open
