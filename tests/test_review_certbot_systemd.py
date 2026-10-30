@@ -341,8 +341,8 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         payload, mode, uid = files[path]
         files[path] = (
             payload.replace(
-                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check\\n",
-                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check --custom\\n",
+                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check\n",
+                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check --custom\n",
             ), mode, uid
         )
         report = self.run_review(files, links)
