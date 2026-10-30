@@ -34,6 +34,12 @@ Exception for the observed existing static sites: `iac/web-baseline.yml` provide
 replace the running VPS, deploy any sites or imply the backend is ready. Validate Ansible syntax in CI;
 never apply to a host with existing live release pointers, and require explicit operator consent.
 
+The `scripts/recovery_archive.py` utility validates a **user-provided already-restored**
+Recovery Set and may stage its archive *only* under a fresh private `/tmp` or `/var/tmp`
+path with explicit acknowledgement. It cannot install live configs, issue certs or
+retrieve S3 secrets. Do not misrepresent synthetic CI tests as a completed clean-host
+restore, or expose/archive extracted private key content in workflow artifacts.
+
 ## Target principles
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
