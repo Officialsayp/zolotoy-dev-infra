@@ -91,6 +91,7 @@ first production workflow is added.
 - [Offline recovery archive validation and private staging](docs/runbooks/recovery-archive-staging.md)
 - [Guarded reviewed Nginx configuration restore](docs/runbooks/nginx-reviewed-restore.md)
 - [Offline Certbot/systemd recovery evidence](docs/runbooks/certbot-systemd-recovery.md)
+- [Offline Restic backup wrapper and credential dependency review](docs/runbooks/restic-wrapper-dependency-review.md)
 - [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
@@ -112,6 +113,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 -m py_compile scripts/recovery_archive.py
 python3 -m py_compile scripts/restore_nginx.py
 python3 -m py_compile scripts/review_certbot_systemd.py
+python3 -m py_compile scripts/review_backup_wrappers.py
 git diff --check
 ```
 
