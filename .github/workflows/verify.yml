@@ -30,5 +30,6 @@ jobs:
           python3 -m py_compile scripts/recovery_archive.py
           python3 -m py_compile scripts/restore_nginx.py
           python3 -m py_compile scripts/review_certbot_systemd.py
+          python3 -m py_compile scripts/review_backup_wrappers.py
       - name: Check whitespace errors in latest change
         run: git diff --check HEAD^ HEAD
