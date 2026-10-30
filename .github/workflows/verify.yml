@@ -24,5 +24,9 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/infra-ansible"
           "$RUNNER_TEMP/infra-ansible/bin/python" -m pip install --disable-pip-version-check -r iac/requirements.txt
           "$RUNNER_TEMP/infra-ansible/bin/ansible-playbook" --syntax-check iac/web-baseline.yml
+      - name: Verify recovery-set archive inspector and malicious-input tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          python3 -m py_compile scripts/recovery_archive.py
       - name: Check whitespace errors in latest change
         run: git diff --check HEAD^ HEAD
