@@ -26,7 +26,8 @@ Docker Compose and Portainer preinstalled. Containers Ready documents a minimum 
 3. install/verify Docker Engine + Compose (or use the selected prepared image);
 4. create a dedicated deployment directory and non-root operational user where practical;
 5. authenticate to the selected container registry without committing credentials;
-6. install the first validated Compose/Caddy configuration from this repository;
+6. install the first validated Compose/edge configuration from this repository only after checking
+   which web server already serves the VPS; never replace the active site listener by default;
 7. validate config before starting;
 8. start internal services first, then application, then edge;
 9. verify readiness locally on the host;
