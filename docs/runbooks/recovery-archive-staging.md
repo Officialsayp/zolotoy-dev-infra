@@ -49,6 +49,39 @@ under files/symlinks, and archives exceeding conservative size/count
 limits. Symlinks such as Let's Encrypt's relative links into
 `../../archive` are permitted **only when they resolve inside the archive**.
 
+## When strict validation fails on an absolute symlink
+
+The **2026-10-31 real recovery archive** passed manifest schema, compressed-size
+and SHA-256 checks on the original Selectel VPS, but the strict metadata
+validator returned `Unsafe absolute or malformed symlink`. This is **not
+evidence of archive corruption**: source host symlinks may legitimately use
+absolute paths that would escape an isolated extraction root.
+
+Do **not** loosen the extraction rule or stage this archive yet. Instead,
+from a trusted checkout that matches the reviewed PR commit, run:
+
+```bash
+python3 -B scripts/recovery_archive.py \
+  /var/backups/site-recovery/20261030T211925.555690Z \
+  --diagnose-symlinks
+```
+
+The diagnostic rechecks the manifest SHA-256 before reading archive headers
+and emits **aggregate counts only**, grouped by the symlink's source area
+(Nginx, Let's Encrypt, systemd, website or other). The target classes
+distinguish absolute targets *present elsewhere in the archive*, external
+absolute targets, relative targets, malformed targets and traversal. It
+does not print source filenames, symlink destination strings or file content.
+It never enables extraction, and its `archive_safe_for_staging` result
+remains `false` unconditionally.
+
+An absolute link with a target represented inside the archive may be a
+candidate for **separate, explicitly reviewed relative-link rewriting**, but
+this is not yet implemented. External absolute links require manual analysis
+and must not be blindly replicated inside a private staging directory.
+The original strict `verify_set` and `--stage-dir` paths continue to reject
+all absolute symlinks.
+
 ## Second: optional private staging on a NEW isolated host
 
 Only if there is a concrete recovery need and protected local storage,
