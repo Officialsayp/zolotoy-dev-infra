@@ -45,6 +45,48 @@ Some unit names and backup script paths are based on earlier owner-provided
 observations and must be reconciled with the actual recovered unit definitions.
 A missing member is a gap for review, not permission to fabricate one.
 
+## Read-only acceptance check against the *actual* Recovery Set
+
+This check has **not** been executed by the repository maintainer or CI against
+the protected Selectel archive. The original VPS is not accessible to the
+GitHub connector, and uploading the real backup to GitHub Actions would risk
+disclosing TLS private keys. Do **not** attach or commit the tarball.
+
+An operator with authorized root access to the existing host can run the
+following in a **trusted local checkout at a reviewed full commit SHA**, without
+changing website configuration or unarchiving private keys:
+
+```bash
+# From a trusted copy of Officialsayp/zolotoy-dev-infra on the original VPS.
+# The operator must verify the checkout's full SHA against the reviewed PR.
+git rev-parse HEAD
+sudo python3 -B scripts/recovery_archive.py \
+  /var/backups/site-recovery/20261030T211925.555690Z
+sudo python3 -B scripts/review_certbot_systemd.py \
+  /var/backups/site-recovery/20261030T211925.555690Z
+```
+
+The two `python3 -B` processes read the local recovery archive, manifest and
+selected metadata. No `--stage-dir`, `--apply`, `--rollback-journal`,
+network access, service reload, or Restic write is requested. `-B` disables
+bytecode cache writes. Running `sudo` can still produce ordinary host
+authentication/audit records; this is not a zero-side-effect process at the
+operating-system level.
+
+Expected review fields include `recovery_archive_hash_and_structure: pass`,
+`known_scope_checks_pass`, `static_review_complete`,
+`safe_to_apply_without_further_review: false`, plus per-domain and per-unit
+Booleans. `static_review_complete: false` is presently expected because the
+exact Restic-check service `ExecStart` has not been confirmed. Any additional
+false or missing values should be classified, **not** auto-corrected on the
+production VPS. Save only the redacted report or paste the summarized JSON
+after personally checking it for sensitive content.
+
+This runs checks against the original host's *local copy*. It does **not**
+replace the previously demonstrated isolated Restic **remote** restore, nor
+does it establish clean-host portability or successful future unattended ACME
+renewal.
+
 ## Controlled Certbot restoration — separate operator approval required
 
 1. Independently recover the Restic password, S3 credentials and DNS control
