@@ -127,15 +127,19 @@ def static_hook_checks(text: str | None) -> dict[str, bool]:
 def review(recovery_set: Path) -> dict[str, Any]:
     # This independently checks archive SHA256 and rejects unsafe archive members
     # before reading any selected metadata or config.
-    records, _ = verify_set(recovery_set)
+    # Read-only: absolute/dangling links are audited as metadata only.
+    # Do not use these records for extraction. The strict staging guard remains.
+    records, _ = verify_set(recovery_set, metadata_only=True)
     members = {name: member for member, name in records}
     result: dict[str, Any] = {
         "schema": 1,
         "mode": "offline-read-only",
-        "recovery_archive_hash_and_structure": "pass",
+        "recovery_archive_hash_and_structure": "pass-metadata-only",
+        "symlink_targets_extraction_safe": False,
         "certbot": {"renewal_profiles": [], "deploy_hook": {}, "certificate_paths": []},
         "systemd": {"backup_units": [], "package_units": "reinstall-and-verify-on-new-host"},
         "unverified": [
+            "absolute-and-external-archived-symlink-targets",
             "original-vps-loss-independent-restic-credentials",
             "actual-unattended-acme-renewal",
             "restored-private-key-trust-and-permissions",
