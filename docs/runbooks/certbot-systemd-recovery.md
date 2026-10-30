@@ -15,8 +15,12 @@ Set is fetched into a protected local directory:
     python3 scripts/review_certbot_systemd.py /secure/recovery/20261030T211925.555690Z
 
 Replace the example directory with the actual protected recovery-set path.
-The tool checks the archive SHA-256 and safe member structure, reads only small
-allowlisted configuration fragments in memory, and emits a bounded JSON summary.
+The tool checks archive SHA-256 and **read-only metadata safety** (including
+allowing absolute/external symlinks as archived *data*, never as extraction
+instructions), reads only small allowlisted configuration fragments in memory,
+and emits a bounded JSON summary. The report field
+`recovery_archive_hash_and_structure` is `pass-metadata-only`, not proof
+that the archive can be safely extracted.
 It never outputs raw renewal settings, service ExecStart contents or certificate
 material. It cannot install or enable any service or contact Let's Encrypt.
 
@@ -61,7 +65,8 @@ changing website configuration or unarchiving private keys:
 # The operator must verify the checkout's full SHA against the reviewed PR.
 git rev-parse HEAD
 sudo python3 -B scripts/recovery_archive.py \
-  /var/backups/site-recovery/20261030T211925.555690Z
+  /var/backups/site-recovery/20261030T211925.555690Z \
+  --metadata-only
 sudo python3 -B scripts/review_certbot_systemd.py \
   /var/backups/site-recovery/20261030T211925.555690Z
 ```
@@ -73,7 +78,7 @@ bytecode cache writes. Running `sudo` can still produce ordinary host
 authentication/audit records; this is not a zero-side-effect process at the
 operating-system level.
 
-Expected review fields include `recovery_archive_hash_and_structure: pass`,
+Expected review fields include `recovery_archive_hash_and_structure: pass-metadata-only`,
 `known_scope_checks_pass`, `static_review_complete`,
 `safe_to_apply_without_further_review: false`, plus per-domain and per-unit
 Booleans. `static_review_complete: false` is presently expected because the
