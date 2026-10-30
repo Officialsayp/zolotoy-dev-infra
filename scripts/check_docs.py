@@ -14,6 +14,8 @@ REQUIRED = [
     'iac/web-baseline.yml', 'iac/requirements.txt',
     'scripts/recovery_archive.py', 'tests/test_recovery_archive.py',
     'docs/runbooks/recovery-archive-staging.md',
+    'docs/runbooks/nginx-reviewed-restore.md', 'scripts/restore_nginx.py',
+    'tests/test_restore_nginx.py',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
