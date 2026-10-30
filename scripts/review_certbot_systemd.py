@@ -25,9 +25,11 @@ CERT_NAMES = (
     "origin.zolotoy.dev",
 )
 HOOK = "etc/letsencrypt/renewal-hooks/deploy/20-nginx-reload"
+# Only the offsite wrapper ExecStart is established by owner-provided evidence.
+# The Restic-check ExecStart was NOT provided: never invent its script path.
 BACKUP_SERVICES = {
     "maxzolotoy-offsite-backup": "usr/local/sbin/maxzolotoy-offsite-backup",
-    "maxzolotoy-restic-check": "usr/local/sbin/maxzolotoy-restic-check",
+    "maxzolotoy-restic-check": None,
 }
 CONFIG_LIMIT = 128 * 1024
 
@@ -82,6 +84,8 @@ def static_hook_checks(text: str | None) -> dict[str, bool]:
             "nginx_active_guard": False,
             "nginx_config_check": False,
             "nginx_reload_command": False,
+            "strict_failure_handling": False,
+            "only_expected_hook_commands": False,
         }
     try:
         check = subprocess.run(
@@ -94,8 +98,20 @@ def static_hook_checks(text: str | None) -> dict[str, bool]:
         syntactically_valid = check.returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         syntactically_valid = False
+    expected_commands = (
+        "#!/bin/sh",
+        "set -eu",
+        "if systemctl is-active --quiet nginx; then",
+        "/usr/sbin/nginx -t",
+        "/usr/bin/systemctl reload nginx",
+        "fi",
+    )
+    actual_commands = tuple(line.strip() for line in text.splitlines() if line.strip())
     return {
         "posix_syntax_pass": syntactically_valid and text.startswith("#!/bin/sh\n"),
+        "strict_failure_handling": "set -eu" in actual_commands,
+        # Prevent a syntactically valid but modified hook from falsely passing.
+        "only_expected_hook_commands": actual_commands == expected_commands,
         "nginx_active_guard": bool(
             re.search(r"(?m)^\s*if\s+systemctl\s+is-active\s+--quiet\s+nginx\s*;\s*then\s*$", text)
         ),
@@ -166,7 +182,7 @@ def review(recovery_set: Path) -> dict[str, Any]:
             timer_name = f"etc/systemd/system/{unit}.timer"
             service = members.get(service_name)
             timer = members.get(timer_name)
-            executable = members.get(script_path)
+            executable = members.get(script_path) if script_path else None
             service_text = limited_text(archive, service) if service and service.isfile() else None
             timer_text = limited_text(archive, timer) if timer and timer.isfile() else None
             svc_settings = section_values(service_text, "Service", ("ExecStart",)) if service_text is not None else {}
@@ -179,8 +195,15 @@ def review(recovery_set: Path) -> dict[str, Any]:
                 "timer_regular_file": bool(timer and timer.isfile()),
                 "service_safe_owner_mode": bool(service and service.isfile() and owner_and_mode(service)),
                 "timer_safe_owner_mode": bool(timer and timer.isfile() and owner_and_mode(timer)),
-                "service_references_expected_script": script_path in svc_settings.get("ExecStart", ""),
-                "script_regular_file": bool(executable and executable.isfile()),
+                "execstart_present": bool(svc_settings.get("ExecStart")),
+                # Null means source evidence is insufficient, NOT a match.
+                "service_references_expected_script": (
+                    script_path in svc_settings.get("ExecStart", "") if script_path else None
+                ),
+                "script_regular_file": (
+                    bool(executable and executable.isfile()) if script_path else None
+                ),
+                "execstart_requires_manual_review": script_path is None,
                 "has_timer_schedule": bool(timer_settings),
             })
         result["systemd"]["backup_units"] = units
@@ -202,17 +225,30 @@ def review(recovery_set: Path) -> dict[str, Any]:
         for p in cert_paths
     )
     hook_ok = all(result["certbot"]["deploy_hook"].values())
-    units_ok = all(
+    units_basic_ok = all(
         u["service_regular_file"] and u["timer_regular_file"]
         and u["service_safe_owner_mode"] and u["timer_safe_owner_mode"]
-        and u["service_references_expected_script"] and u["script_regular_file"]
-        and u["has_timer_schedule"]
+        and u["execstart_present"] and u["has_timer_schedule"]
         for u in units
     )
-    result["static_review_complete"] = (
-        profiles_ok and certificate_paths_ok and hook_ok and units_ok
+    known_script_checks_ok = all(
+        u["service_references_expected_script"] and u["script_regular_file"]
+        for u in units if not u["execstart_requires_manual_review"]
+    )
+    unresolved_exec = [
+        u["unit"] for u in units if u["execstart_requires_manual_review"]
+    ]
+    result["systemd"]["execstart_manual_review_needed_for"] = unresolved_exec
+    result["known_scope_checks_pass"] = bool(
+        profiles_ok and certificate_paths_ok and hook_ok
+        and units_basic_ok and known_script_checks_ok
         and result["systemd"]["unit_state_inventory_present"]
         and result["systemd"]["package_inventory_present"]
+    )
+    # The real check service's command remains unknown until owner evidence
+    # or separate authorized inspection resolves it.
+    result["static_review_complete"] = (
+        result["known_scope_checks_pass"] and not unresolved_exec
     )
     result["safe_to_apply_without_further_review"] = False
     return result
