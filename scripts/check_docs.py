@@ -12,6 +12,8 @@ REQUIRED = [
     'docs/runbooks/rollback.md', 'docs/runbooks/portable-vps-migration.md',
     'docs/runbooks/web-vps-bootstrap.md', 'inventory/web-vps-observed-packages.yaml',
     'iac/web-baseline.yml', 'iac/requirements.txt',
+    'scripts/recovery_archive.py', 'tests/test_recovery_archive.py',
+    'docs/runbooks/recovery-archive-staging.md',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
