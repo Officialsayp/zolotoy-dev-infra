@@ -91,25 +91,30 @@ A later read-only inspection showed:
   `/etc/letsencrypt/renewal-hooks/deploy/20-nginx-reload`. Individual renewal
   profiles do not define `deploy_hook`; the hook directory is a separate supported
   mechanism. Later read-only inspection showed `root:root` ownership, mode `0750`,
-  and an executable bit. The file begins `#!/bin/sh` and contains a guarded
-  `systemctl is-active --quiet nginx` check followed by `/usr/sbin/nginx -t` and
-  `/usr/bin/systemctl reload nginx`. `bash -n` passed, but the **actual `/bin/sh`
-  syntax, error handling and hook execution during certificate replacement are not yet
-  verified**. Do not execute the hook just for inspection.
+  and an executable bit. The full owner-provided script is five lines:
+  `#!/bin/sh`, `set -eu`, a guarded `systemctl is-active --quiet nginx`,
+  then `/usr/sbin/nginx -t` followed by `/usr/bin/systemctl reload nginx`.
+  Both `bash -n` and the correct interpreter syntax check `sh -n` passed.
+  This validates static hook logic and shell syntax, **not execution by Certbot
+  or an actual Nginx reload during certificate replacement**.
 - `/var/www/zolotoy-dev/releases/current` is an existing symlink pointing to an
   existing directory. A local TLS-verified request using `curl --resolve` to
   `https://origin.zolotoy.dev/_health` returned **HTTP 200**, showing Nginx/TLS
-  and the staging health endpoint work locally. **No homepage HTTP status** was
-  supplied, so a complete staging application smoke test has not passed. Staging
-  remains absent from the inspected recovery archive. The existing manual staging
+  and the staging health endpoint work locally. A follow-up local
+  `curl --resolve` to `https://origin.zolotoy.dev/` returned **HTTP 200**
+  with `ssl_verify_result=0` (trusted certificate validation passed).
+  This verifies the local HTTPS homepage and health endpoint, **not the full
+  application route corpus or public-network reachability**. Staging remains
+  absent from the inspected recovery archive. The existing manual staging
   GitHub Actions workflow can rebuild the artifact after a clean-host
   re-provisioning, but this has not been rehearsed.
 
-Next safe check: inspect permissions and non-secret logic of the deploy hook;
-check its syntax and effective systemd journal status. Separately, verify staging
-is recoverable through its documented manual deploy without changing production.
-A Certbot renewal dry-run or hook invocation should be a separately approved test;
-it is not equivalent to a proven unattended renewal.
+Next acceptance gates: observe an actual scheduled Certbot run and later
+a real renewal/reload; an optional, separately approved Certbot dry-run would
+only test ACME validation against the staging CA and does not itself prove a
+future unattended production renewal. Confirm whether staging can be recreated
+through a reviewed manual workflow on a clean host; never publish/overwrite
+staging merely to test the backup.
 
 ## Historical Caddy PR guard (2026-10-31)
 
