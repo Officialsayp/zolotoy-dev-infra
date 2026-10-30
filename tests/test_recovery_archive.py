@@ -167,7 +167,7 @@ class RecoveryArchiveTest(unittest.TestCase):
     def test_symlink_diagnostics_classify_bad_relative_and_malformed_targets(self):
         links = {
             "var/www/maxzolotoy/current": "releases/rel1",
-            "var/www/maxzolotoy/bad": "../../../etc/passwd",
+            "var/www/maxzolotoy/bad": "../../../../etc/passwd",
             "etc/nginx/invalid": "foo\\bar",
         }
         source = make_set(self.root, links=links)
