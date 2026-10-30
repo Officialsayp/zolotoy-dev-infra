@@ -20,6 +20,7 @@ REQUIRED = [
     'docs/runbooks/certbot-systemd-recovery.md',
     'scripts/review_backup_wrappers.py', 'tests/test_review_backup_wrappers.py',
     'docs/runbooks/restic-wrapper-dependency-review.md',
+    'docs/runbooks/independent-macos-restic-restore.md',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
