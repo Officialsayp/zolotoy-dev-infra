@@ -364,7 +364,8 @@ def main() -> int:
             print("Private staging: PASS (no production files changed)")
             print("Sensitive staged data must be protected and cleaned up by the operator.")
         return 0
-    except (RecoveryError, OSError, ValueError, json.JSONDecodeError) as error:
+    except (RecoveryError, OSError, ValueError, json.JSONDecodeError,
+            tarfile.TarError, EOFError) as error:
         # Avoid dumping sensitive paths or exception contents to logs.
         print(f"Recovery validation FAILED ({type(error).__name__})", file=sys.stderr)
         return 1
