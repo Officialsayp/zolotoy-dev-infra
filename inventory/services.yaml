@@ -1,39 +1,43 @@
 schema_version: 1
 project: zolotoy-dev
-snapshot_date: 2026-09-06
+snapshot_date: 2026-10-31
 
+# Repository observations only; live VPS and public DNS were not inspected.
 services:
   frontend:
     repository: Officialsayp/zolotoy-dev-frontend
     canonical_name: zolotoy-dev-frontend
     status: implemented
     public_url: https://zolotoy.dev
-    current_hosting: cloudflare
+    current_hosting: live-unverified
+    deployment_code: selectel-production-and-staging
     runtime_mode: mock-first
 
   order:
-    repository: Officialsayp/order-service
+    repository: Officialsayp/zolotoy-dev-backend
+    source_path: services/order-service
     canonical_name: order-service
-    status: planned
+    status: in-development
     public_api_host: order-api.zolotoy.dev
     internal_port: null
+    deployment_status: not-deployed
 
   auth:
-    repository: Officialsayp/auth-service
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: auth-service
     status: planned
     public_api_host: auth-api.zolotoy.dev
     internal_port: null
 
   notification:
-    repository: Officialsayp/notification-service
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: notification-service
     status: planned
     public_api_host: notification-api.zolotoy.dev
     internal_port: null
 
   shortener:
-    repository: Officialsayp/url-shortener
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: url-shortener
     status: planned
     public_api_host: shortener-api.zolotoy.dev
@@ -45,5 +49,5 @@ infrastructure:
   deployment_status: not-deployed
   target_provider: Selectel
   target_runtime: docker-compose-single-vps
-  edge: caddy
+  edge: decision-pending-live-audit
   container_registry: decision-pending
