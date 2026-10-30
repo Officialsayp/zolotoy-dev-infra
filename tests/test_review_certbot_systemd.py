@@ -117,6 +117,19 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         self.assertNotIn("SYNTHETIC-NOT-REAL-CERTIFICATE", serialized)
         self.assertNotIn("ExecStart=", serialized)
 
+    def test_realistic_systemd_absolute_links_are_metadata_only(self):
+        files, links = fixtures()
+        links["etc/systemd/system/timers.target.wants/certbot.timer"] = (
+            "/lib/systemd/system/certbot.timer"
+        )
+        report = self.run_review(files, links)
+        self.assertTrue(report["known_scope_checks_pass"])
+        self.assertEqual(
+            report["recovery_archive_hash_and_structure"], "pass-metadata-only"
+        )
+        self.assertFalse(report["symlink_targets_extraction_safe"])
+        self.assertFalse(report["safe_to_apply_without_further_review"])
+
     def test_missing_renewal_profile_marks_review_incomplete(self):
         files, links = fixtures()
         files.pop("etc/letsencrypt/renewal/zolotoy.dev.conf")
