@@ -244,6 +244,10 @@ A rollback must disable only newly introduced timers before restoring reviewed
 prior units and their exact enabled-state inventory. Never delete/prune the
 original Restic snapshots during a rehearsal, and never modify the current VPS.
 
+A separate [read-only Restic wrapper dependency inspector](restic-wrapper-dependency-review.md)
+classifies archived backup script dependencies without executing scripts or
+checking secret values; it does not prove runtime behavior.
+
 ## Offline CI
 
     python3 -m unittest discover -s tests -p 'test_*.py' -v
