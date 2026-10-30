@@ -25,11 +25,12 @@ Individual service repositories continue to own their own `Dockerfile`, migratio
 
 ## Current state
 
-As verified from repository contents on 2026-10-31 (not from a live VPS audit):
+As of 2026-10-31, repository inspection plus owner-provided read-only Selectel VPS diagnostics establish:
 
-- `zolotoy-dev-frontend` has implemented Selectel production/staging workflows, Nginx profiles and historical Cloudflare/Caddy tooling; actual active hosting must be checked on the VPS and DNS;
+- `zolotoy-dev-frontend` has implemented Selectel production/staging workflows; the observed VPS actively serves Nginx and locally verified HTTPS staging, while public DNS is not independently verified;
 - `zolotoy-dev-backend` contains an in-development Order service, while Auth, Notification and Shortener remain planned;
 - there is still no verified backend production Compose, registry image or deploy workflow in this repository;
+- a **gated Ansible phase-one web VPS baseline** installs known Nginx/Certbot/Restic packages and deployment users only on an approved, empty Ubuntu 26.04 host. It is not a complete site recovery or provider provisioning.
 - see [portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md) before moving either site.
 
 The first active Compose/edge/deployment files should be added when there is at least one published,
@@ -86,6 +87,8 @@ first production workflow is added.
 - [Observability](docs/observability.md)
 - [Backup and restore plan](docs/backups.md)
 - [Bootstrap Selectel runbook](docs/runbooks/bootstrap-selectel.md)
+- [Gated web VPS Ansible bootstrap](docs/runbooks/web-vps-bootstrap.md)
+- [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
 - [Portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md)
@@ -95,10 +98,13 @@ first production workflow is added.
 
 ## Verification
 
-This bootstrap has no runtime dependencies. Check repository integrity with:
+Repository documentation validation uses Python; the **web VPS baseline syntax check** additionally uses pinned Ansible Core on the CI runner. Check with:
 
 ```bash
 python scripts/check_docs.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r iac/requirements.txt
+.venv/bin/ansible-playbook --syntax-check iac/web-baseline.yml
 git diff --check
 ```
 
