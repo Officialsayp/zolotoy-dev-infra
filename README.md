@@ -2,9 +2,10 @@
 
 Cross-service integration and deployment infrastructure for the `zolotoy.dev` backend portfolio.
 
-This repository is intentionally **documentation-first at bootstrap time**. The Go service repositories
-and production Selectel backend environment do not exist yet, so this initial commit does not pretend
-that a runnable production Compose stack or deployment workflow has already been validated.
+This repository remains **documentation-first for backend deployment**. The Go Order service now exists
+inside `Officialsayp/zolotoy-dev-backend`, but no production backend image, validated Compose stack or
+GitOps deploy has been established. The static sites already have independent Selectel-related CI/CD;
+do not duplicate their working deployment workflows.
 
 ## Ownership
 
@@ -24,12 +25,12 @@ Individual service repositories continue to own their own `Dockerfile`, migratio
 
 ## Current state
 
-As of 2026-09-06:
+As verified from repository contents on 2026-10-31 (not from a live VPS audit):
 
-- `zolotoy-dev-frontend` is implemented and deployed through Cloudflare in the current project cycle;
-- backend repositories are not yet created;
-- no active `zolotoy.dev` Selectel backend deployment is claimed;
-- this repo contains the accepted deployment direction and runbook scaffolding only.
+- `zolotoy-dev-frontend` has implemented Selectel production/staging workflows, Nginx profiles and historical Cloudflare/Caddy tooling; actual active hosting must be checked on the VPS and DNS;
+- `zolotoy-dev-backend` contains an in-development Order service, while Auth, Notification and Shortener remain planned;
+- there is still no verified backend production Compose, registry image or deploy workflow in this repository;
+- see [portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md) before moving either site.
 
 The first active Compose/Caddy/deployment files should be added when there is at least one published,
 smoke-testable backend service image.
@@ -47,9 +48,9 @@ shortener-api.zolotoy.dev     -> url-shortener management API
 s.zolotoy.dev                 -> url-shortener public redirect path
 ```
 
-Caddy is the preferred first edge because the existing `saypix`/`maxzolotoy.com` VPS workflow already
-uses it successfully, and Caddy provides automatic HTTPS and reverse proxying. This is a project
-operational reuse decision, not a requirement imposed on the Go services.
+The backend reverse proxy decision remains conditional on a live VPS audit: both Caddy and Nginx
+profiles exist in the website repos. Reuse the currently validated edge and its TLS/deploy contract;
+do not force a migration solely to introduce backend services.
 
 Only Caddy should expose public `80/443` on the single-VPS baseline. PostgreSQL, Redis, Kafka,
 Prometheus metrics endpoints and service container ports remain internal unless an explicit
@@ -87,6 +88,7 @@ first production workflow is added.
 - [Bootstrap Selectel runbook](docs/runbooks/bootstrap-selectel.md)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
+- [Portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md)
 - [ADRs](docs/adr/README.md)
 - [Research references](docs/references.md)
 - [Service inventory](inventory/services.yaml)
