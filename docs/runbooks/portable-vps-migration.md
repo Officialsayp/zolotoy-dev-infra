@@ -41,13 +41,17 @@ This is another **operator-provided read-only observation**, not a renewal simul
 - The current `certbot.timer` uses `authenticator = webroot` with `webroot_path = /var/lib/letsencrypt` for all five names. Confirm Nginx serves the ACME challenge path from this webroot on port 80, and verify actual unattended renewal plus reload hook before calling renewal proven.
 
 - Follow-up read-only inspection of systemd units found `maxzolotoy-offsite-backup.service` invokes `/usr/local/sbin/maxzolotoy-offsite-backup`, which last exited successfully at 2026-10-30 21:19 UTC. `maxzolotoy-config-backup.service` invokes `/usr/local/sbin/maxzolotoy-config-backup`, but had no recorded invocation (`start_time=[n/a]`). The contents of the new off-site script are **not yet reviewed**; successful recovery-set logs are not proof that all Nginx/Certbot/site/systemd files are included.
-- The user's `grep -Rn 'acme-challenge' /etc/nginx/sites-enabled /etc/nginx/conf.d` produced no matches. This **does not establish missing ACME routing**: an ordinary Nginx root or another include may serve the challenge. Confirm the effective Nginx configuration and HTTP webroot mapping before running any renewal dry-run.
+- A later `sudo nginx -T` inspection showed explicit `location ^~ /.well-known/acme-challenge/ { root /var/lib/letsencrypt; ... }` for **all five HTTP hostnames**. The earlier negative grep result was incomplete (the effective configuration includes the directives). This establishes configured ACME routing, **not** successful public ACME challenge validation or a future automatic certificate renewal.
+
+- The latest local recovery directory, `/var/backups/site-recovery/20261030T211925.555690Z/`, contains `recovery.tar.gz` (1,402,955 bytes), `manifest.json` (2,113 bytes), `systemd-unit-states.txt` (23,756 bytes), and `packages.tsv` (18,235 bytes). Earlier local recovery directories were created at 20:19, 20:21 and 20:54 UTC. Package inventory appears in the two newest directories only. The data proves these files exist locally; **archive contents, manifest semantics, local file permissions, secret exposure and off-site fidelity are unverified**.
+- The recovery implementation uses `/usr/local/sbin/site-recovery.py` with functions named `local`, `restic`, `offsite`, `rotate`, `lock` and references to both site backup paths. Function names and path references are evidence of intended design, **not** evidence that both sites, nginx/TLS configuration or certificates are actually covered. A local tarball may contain plaintext secrets even when the remote Restic repository is encrypted.
 
 Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
 
-Next read-only validation priorities: contents/backup input selection of the actual off-site script;
-last off-site snapshot file manifest; effective Nginx ACME webroot and Certbot renewal hooks;
-restore to an isolated destination; actual DNS A/AAAA/proxy mode and public TLS checks. Do not publish
+Next read-only validation priorities: inspect only the metadata and category coverage of the newest
+recovery archive and its manifest without exposing secrets; verify local archive permissions; compare
+against an actual Restic off-site snapshot's file inventory; test restore in an isolated destination;
+check Certbot renewal hooks and public challenge reachability, DNS/proxy mode and public TLS checks. Do not publish
 unredacted configuration, credential files, or private keys.
 
 The existing 1 GiB/10 GiB host is suitable only for the currently observed lightweight web
