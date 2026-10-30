@@ -140,6 +140,60 @@ class RecoveryArchiveTest(unittest.TestCase):
         with self.assertRaises(recovery.RecoveryError):
             recovery.verify_set(source)
 
+    def test_symlink_diagnostics_classify_absolute_links_without_exposing_names(self):
+        links = {
+            "etc/nginx/sites-enabled/site": "/etc/nginx/nginx.conf",
+            "var/www/maxzolotoy/current": "/var/www/maxzolotoy/releases/rel1",
+            "etc/nginx/sites-enabled/outside": "/etc/shadow",
+        }
+        source = make_set(self.root, links=links)
+        report = recovery.diagnose_symlinks(source)
+        self.assertEqual(report["archive_sha256_and_size"], "pass")
+        self.assertEqual(report["symlinks_total"], 3)
+        self.assertEqual(
+            report["symlink_target_categories"]["absolute_target_in_archive"], 2
+        )
+        self.assertEqual(
+            report["symlink_target_categories"]["absolute_target_not_in_archive"], 1
+        )
+        self.assertEqual(report["by_source_group"]["nginx"]["absolute_target_in_archive"], 1)
+        self.assertFalse(report["archive_safe_for_staging"])
+        for secret in ("shadow", "sites-enabled/site", "/etc/nginx/nginx.conf"):
+            self.assertNotIn(secret, json.dumps(report))
+        # Diagnosis must never silently weaken the extraction gate.
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.verify_set(source)
+
+    def test_symlink_diagnostics_classify_bad_relative_and_malformed_targets(self):
+        links = {
+            "var/www/maxzolotoy/current": "releases/rel1",
+            "var/www/maxzolotoy/bad": "../../../etc/passwd",
+            "etc/nginx/invalid": "foo\\bar",
+        }
+        source = make_set(self.root, links=links)
+        report = recovery.diagnose_symlinks(source)
+        categories = report["symlink_target_categories"]
+        self.assertEqual(categories["relative_target_in_archive"], 1)
+        self.assertEqual(categories["relative_target_escapes_root"], 1)
+        self.assertEqual(categories["malformed_target"], 1)
+
+    def test_symlink_diagnostics_requires_valid_manifest_hash(self):
+        source = make_set(self.root)
+        manifest_path = source / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["sha256"] = "0" * 64
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.diagnose_symlinks(source)
+
+    def test_symlink_diagnostics_reports_unsafe_archive_member_without_leaking_it(self):
+        links = {"../../private_link": "/etc/shadow"}
+        source = make_set(self.root, links=links)
+        report = recovery.diagnose_symlinks(source)
+        self.assertEqual(report["malformed_member_names"], 1)
+        self.assertEqual(report["symlink_target_categories"]["unsafe_member_name"], 1)
+        self.assertNotIn("private_link", json.dumps(report))
+
     def test_existing_stage_target_rejected(self):
         target = self.root / "already-exists"
         target.mkdir()
