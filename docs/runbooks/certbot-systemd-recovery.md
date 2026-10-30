@@ -1,7 +1,10 @@
 # Certbot and systemd recovery — offline evidence and approval gates
 
-Status (2026-10-31): **read-only offline code + synthetic CI tests**. No application to
-live VPS, production certificates, actual backup or clean replacement host has occurred.
+Status (2026-10-31): **synthetic CI tests and operator-confirmed real-backup
+static inspection passed** for the bounded Certbot/systemd evidence checks.
+The owner ran the read-only inspector on the live VPS against the protected
+local Recovery Set; no production configurations were installed or changed.
+An independent clean-host recovery has NOT been rehearsed.
 
 The observed Selectel site host now uses **Nginx + Certbot**, not the older Caddy +
 lego model. The archive may contain root-only TLS secrets. Never copy the entire
@@ -63,10 +66,12 @@ A missing member is a gap for review, not permission to fabricate one.
 
 ## Read-only acceptance check against the *actual* Recovery Set
 
-This check has **not** been executed by the repository maintainer or CI against
-the protected Selectel archive. The original VPS is not accessible to the
-GitHub connector, and uploading the real backup to GitHub Actions would risk
-disclosing TLS private keys. Do **not** attach or commit the tarball.
+The owner **has executed this read-only check successfully** against the
+protected Selectel archive on the original VPS. The repository maintainer and
+CI cannot independently inspect that server's protected archive: results
+below rely on the operator-provided terminal output. Uploading the real backup
+to GitHub Actions would risk disclosing TLS private keys. **Do not** attach
+or commit the tarball.
 
 An operator with authorized root access to the existing host can run the
 following in a **trusted local checkout at a reviewed full commit SHA**, without
@@ -135,10 +140,11 @@ evidence of misconfigured Certbot**. Certbot serializations can include a
 trailing comma or a nested per-domain `[[webroot_map]]`. The updated parser
 handles both forms, keeps map precedence, and rejects conflicting values.
 
-**Status:** no confirmed outcome yet for the updated parser against the real
-archive. Repeat only the read-only `--failures-only` command from the exact
-CI-verified commit. A successful static comparison still does **not** prove
-unattended ACME renewal, DNS reachability or correct Nginx challenge delivery.
+**Confirmed result:** the owner reran the corrected inspector on the real
+archive and all five profiles were recognized as `webroot_map`. The report
+contained no remaining failed known checks. This static comparison still does
+**not** prove unattended ACME renewal, DNS reachability or correct Nginx
+challenge delivery.
 
 ## Real systemd unit executable identity (2026-10-31)
 
@@ -157,6 +163,39 @@ Restic credentials are independently recoverable, or verify successful
 execution on a clean Ubuntu host. Any `static_review_complete=true`
 applies only to the explicitly listed static predicates and does **not**
 authorize installation, enabling timers or merging operational changes.
+
+## Final bounded static audit — PASS (operator output, 2026-10-31)
+
+The owner ran `review_certbot_systemd.py --failures-only` from the
+CI-reviewed commit `2a72545095111ea8a256c54da546ed26edc9d965`
+against the original VPS's protected recovery set
+`20261030T211925.555690Z`. The terminal returned:
+
+- `failed_known_checks: []`
+- `known_scope_checks_pass: true`
+- `static_review_complete: true`
+- `unresolved_manual_reviews: []`
+- `webroot_evidence_sources`: five `webroot_map`, zero `webroot_path`
+  and zero missing
+- `recovery_archive_hash_and_structure: pass-metadata-only`
+- `safe_to_apply_without_further_review: false`
+- process exit code `0`; SSH session remained active
+
+This resolves the previously missing direct executable identity for the
+`maxzolotoy-restic-check` unit and the Certbot renewal-config parser
+compatibility issue. It proves that the selected archive metadata, file
+identities and owner/mode predicates in **this inspector** passed. It does
+**not** validate the wrapper script's internal commands, its environment,
+private credentials off-host, effective systemd sandboxing, unattended ACME
+renewal or any successful clean-host restore.
+
+**Remaining gates:** secure independent off-host S3/Restic credential recovery,
+static review of backup wrapper behavior and dependencies, complete
+replacement-VPS restore rehearsal (including Nginx, site releases, TLS,
+staging rebuild, CI deployment and rollback), and independently observed
+unattended Certbot renewal. Strict archive extraction remains blocked by
+absolute/external symlinks; no one should infer `safe_to_stage=true` from
+the passed metadata-only check.
 
 ## Controlled Certbot restoration — separate operator approval required
 
