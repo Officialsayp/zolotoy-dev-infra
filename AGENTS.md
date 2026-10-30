@@ -29,6 +29,11 @@ Until a backend image exists, keep this repository documentation-first. Do not a
 Compose file full of non-existent images/ports merely to make the tree look complete. Add runnable
 artifacts when they can be validated against real service contracts and health endpoints.
 
+Exception for the observed existing static sites: `iac/web-baseline.yml` provides a guarded,
+**partial** clean-host package/user/directory bootstrap based on real VPS inventory. It does not
+replace the running VPS, deploy any sites or imply the backend is ready. Validate Ansible syntax in CI;
+never apply to a host with existing live release pointers, and require explicit operator consent.
+
 ## Target principles
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
