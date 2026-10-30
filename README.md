@@ -90,6 +90,7 @@ first production workflow is added.
 - [Gated web VPS Ansible bootstrap](docs/runbooks/web-vps-bootstrap.md)
 - [Offline recovery archive validation and private staging](docs/runbooks/recovery-archive-staging.md)
 - [Guarded reviewed Nginx configuration restore](docs/runbooks/nginx-reviewed-restore.md)
+- [Offline Certbot/systemd recovery evidence](docs/runbooks/certbot-systemd-recovery.md)
 - [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
@@ -110,6 +111,7 @@ python3 -m venv .venv
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 -m py_compile scripts/recovery_archive.py
 python3 -m py_compile scripts/restore_nginx.py
+python3 -m py_compile scripts/review_certbot_systemd.py
 git diff --check
 ```
 
