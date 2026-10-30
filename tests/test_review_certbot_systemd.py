@@ -171,8 +171,8 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
             payload, mode, uid = files[path]
             files[path] = (
                 payload.replace(
-                    b"webroot_path = /var/lib/letsencrypt\\n",
-                    b"webroot_path = /var/lib/letsencrypt,\\n",
+                    b"webroot_path = /var/lib/letsencrypt\n",
+                    b"webroot_path = /var/lib/letsencrypt,\n",
                 ), mode, uid
             )
         report = self.run_review(files, links)
@@ -188,10 +188,10 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
             path = f"etc/letsencrypt/renewal/{name}.conf"
             payload, mode, uid = files[path]
             replacement = (
-                f"[[webroot_map]]\\n{name} = /var/lib/letsencrypt\\n"
+                f"[[webroot_map]]\n{name} = /var/lib/letsencrypt\n"
             ).encode()
             files[path] = (
-                payload.replace(b"webroot_path = /var/lib/letsencrypt\\n", replacement),
+                payload.replace(b"webroot_path = /var/lib/letsencrypt\n", replacement),
                 mode, uid
             )
         report = self.run_review(files, links)
@@ -203,9 +203,9 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
 
     def test_certbot_domain_map_overrides_plain_root_and_detects_mismatch(self):
         config = (
-            "[renewalparams]\\nauthenticator = webroot\\n"
-            "webroot_path = /var/lib/letsencrypt,\\n"
-            "[[webroot_map]]\\nzolotoy.dev = /wrong/root\\n"
+            "[renewalparams]\nauthenticator = webroot\n"
+            "webroot_path = /var/lib/letsencrypt,\n"
+            "[[webroot_map]]\nzolotoy.dev = /wrong/root\n"
         )
         source, valid = review.inspect_webroot(config, "zolotoy.dev")
         self.assertEqual(source, "webroot_map")
@@ -213,9 +213,9 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
 
     def test_certbot_nested_map_under_unrelated_section_does_not_match(self):
         config = (
-            "[renewalparams]\\nauthenticator = webroot\\n"
-            "[acme_renewal_info]\\n"
-            "[[webroot_map]]\\nzolotoy.dev = /var/lib/letsencrypt\\n"
+            "[renewalparams]\nauthenticator = webroot\n"
+            "[acme_renewal_info]\n"
+            "[[webroot_map]]\nzolotoy.dev = /var/lib/letsencrypt\n"
         )
         self.assertEqual(
             review.inspect_webroot(config, "zolotoy.dev"),
@@ -224,9 +224,9 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
 
     def test_certbot_conflicting_duplicate_domain_map_rejected(self):
         config = (
-            "[renewalparams]\\nauthenticator = webroot\\n"
-            "[[webroot_map]]\\nzolotoy.dev = /var/lib/letsencrypt\\n"
-            "zolotoy.dev = /different-root\\n"
+            "[renewalparams]\nauthenticator = webroot\n"
+            "[[webroot_map]]\nzolotoy.dev = /var/lib/letsencrypt\n"
+            "zolotoy.dev = /different-root\n"
         )
         self.assertEqual(
             review.inspect_webroot(config, "zolotoy.dev"),
@@ -235,7 +235,7 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
 
     def test_certbot_trailing_comma_does_not_accept_two_paths(self):
         source, valid = review.inspect_webroot(
-            "[renewalparams]\\nwebroot_path = /var/lib/letsencrypt, /wrong,\\n",
+            "[renewalparams]\nwebroot_path = /var/lib/letsencrypt, /wrong,\n",
             "zolotoy.dev",
         )
         self.assertEqual(source, "webroot_path")
