@@ -111,5 +111,9 @@ a universal production protection mechanism.
 6. Test real CI/CD to the replacement host, rollback and authorized DNS
    cutover. Until this is rehearsed, **zero downtime and full IaC are unproven**.
 
+For a separately approved, pre-cutover Nginx config installation and rollback,
+see [reviewed Nginx restore](nginx-reviewed-restore.md). It does not
+restore TLS keys or manage systemd.
+
 Reference: [portable VPS disaster recovery](portable-vps-migration.md) and
 [observed backup/recovery evidence](../backups.md).
