@@ -170,7 +170,7 @@ Redact secrets and private operator data before sharing diagnostics. Preserve ve
 - Provision a supported Linux release. Set up non-root SSH users, authenticated host keys, key-only access, restrictive filesystem permissions, security updates and firewall. Limit external access to HTTP/HTTPS and approved SSH sources. Never expose PostgreSQL, Redis, Kafka, metrics or admin tooling publicly.
 - Install exact required packages based on inspected live state (Nginx + njs/headers-more modules, or Caddy; Docker/Compose only if actually used). Package names and versions must be checked for the new OS.
 - Re-create release directories and least-privilege ownership so the HTTP server can read active releases while deploy accounts cannot access TLS keys or unrelated apps.
-- Restore **reviewed** configs, timers, alerts and renewal scripts from backups/source. Stage restored files to a temporary path and inspect their permissions and contents before controlled installation; never blindly extract backup archives over /.
+- Restore **reviewed** configs, timers, alerts and renewal scripts from backups/source. Use the [guarded clean-host Ansible baseline](web-vps-bootstrap.md) for initial packages/users and the [offline Recovery Set verifier/stager](recovery-archive-staging.md) to validate archive metadata and, only after explicit acknowledgement, extract into a new private temporary directory. Both tools are only partial bootstrap aids and are covered by synthetic CI/syntax tests, **not** a successful clean-host recovery. Inspect restored permissions/symlink targets and contents through a secure operator channel before controlled installation; never blindly extract backup archives over /.
 
 ## 4. TLS, CI/CD and website recovery
 
