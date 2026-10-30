@@ -26,13 +26,21 @@ Checks include:
 - Presence of live certificate/fullchain/private-key paths, without reading keys.
 - Presence, archived owner/mode, executable bit, POSIX syntax and expected
   guarded nginx syntax-check/reload lines in the deploy hook.
-- Presence and basic syntax evidence of the two expected backup-service/timer
-  pairs, their script references and schedule directives.
+- Presence of the two expected backup-service/timer pairs, service ExecStart
+  directives and schedule directives. Only the off-site backup wrapper path has
+  been confirmed from operator-supplied source evidence; the Restic-check
+  service's exact ExecStart remains **unknown** and must not be guessed. The
+  report therefore marks that execution contract as requiring manual review.
 - Presence (not full cryptographic verification) of separately saved package and
   systemd-state inventories.
 
 **A complete static review is not proof of a successful renewal or restoration.**
-The report always sets safe_to_apply_without_further_review to false.
+The report distinguishes known_scope_checks_pass from static_review_complete.
+Because the actual Restic-check service ExecStart has not been established,
+static_review_complete remains false until the execution contract is reviewed
+separately. The report always sets safe_to_apply_without_further_review to false.
+The hook check also requires the *entire* expected six-line shell program,
+including set -eu, not merely isolated matching commands.
 Some unit names and backup script paths are based on earlier owner-provided
 observations and must be reconciled with the actual recovered unit definitions.
 A missing member is a gap for review, not permission to fabricate one.
