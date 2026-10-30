@@ -18,3 +18,8 @@ Thumbs.db
 terraform.tfvars
 secrets/
 backups/
+
+# Local IaC controller environments and private inventories
+.venv/
+*.private.ini
+recovery.ini
