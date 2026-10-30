@@ -123,6 +123,34 @@ NEVER commit, upload, print, paste or put plaintext credentials/private keys
 in GitHub, an Actions artifact, a public log or this review report.
 A compromised source VPS may require credential and certificate rotation.
 
+## Password source identified — operator read-only evidence (2026-10-31)
+
+The owner performed a **names-only** inspection of the existing protected
+`/root/.config/restic/maxzolotoy.env` on the source Selectel VPS:
+
+- Local file: regular, root-owned, no group/other permission bits.
+- A non-empty `RESTIC_PASSWORD` assignment exists in this file.
+- No `RESTIC_PASSWORD_FILE` or `RESTIC_PASSWORD_COMMAND` assignment was
+  detected by the limited inspector.
+- The value was **not** printed or recorded.
+- The operator separately reports already retaining the S3 access keys.
+  Independent custody and usability of these keys were not tested.
+
+This establishes the locally configured Restic password source, **not**
+that the same decryption password is stored anywhere outside the lost-VPS
+failure domain. Restic encrypts the repository independently of S3 transport
+authentication: S3 keys by themselves cannot decrypt its contents.
+Preserve the **existing** password; do not generate or rotate it just to
+complete this review.
+
+The next gate is an owner-controlled, end-to-end encrypted transfer of **only
+the Restic password** into an independent protected password manager or
+equivalent secure escrow, followed by confirmation that it is available from
+a second device. No plaintext password, full .env file or secret-bearing
+terminal output should be placed in the PR, chat, scripts or CI. Avoid
+printing credentials with echo, shell tracing or command-line arguments.
+Do not mark independent-credential recovery verified before this succeeds.
+
 ## Remaining independently approved gates
 
 1. The owner runs the new read-only inspector on the genuine Recovery Set
