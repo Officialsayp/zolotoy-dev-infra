@@ -59,29 +59,25 @@ python3 -m venv .venv
 .venv/bin/ansible-playbook --syntax-check iac/web-baseline.yml
 ```
 
-Example **read-only** check against an isolated new host (replace placeholders
-locally; never commit private inventory):
-
-```bash
-.venv/bin/ansible-playbook -i 'NEW_HOST_IP,' -u ubuntu \
-  --private-key ~/.ssh/approved_recovery_key \
-  --limit NEW_HOST_IP --check iac/web-baseline.yml \
-  -e ansible_user=ubuntu
-```
-
-That example inventory defines a host but **not** the `web_recovery` group.
-For a real check/apply, instead use a private INI inventory containing:
+Create a **private, uncommitted inventory**, e.g. at
+`/secure/path/recovery.ini` (replace `NEW_HOST_IP` and username yourself):
 
 ```ini
 [web_recovery]
 recovery-node ansible_host=NEW_HOST_IP ansible_user=ubuntu
 ```
 
-Then run `--check -i /secure/path/recovery.ini` first. A check-mode report is
-not a real installation test, and Ansible's `apt` module may have prerequisites
-on a minimal OS image (`python3-apt`); resolve these before an approved apply.
-The controller requires a verified SSH host key, trusted sudo access on the new
-host, and no use of `StrictHostKeyChecking=no`.
+Example **read-only** check against that isolated replacement host:
+
+```bash
+.venv/bin/ansible-playbook -i /secure/path/recovery.ini \
+  --check iac/web-baseline.yml
+```
+
+Check mode is **not** a real installation or recovery test. The `apt` module
+may require `python3-apt` on a minimal OS image; resolve prerequisites before
+an approved apply. The controller requires a verified SSH host key,
+trusted sudo access on the new host, and no `StrictHostKeyChecking=no`.
 
 Only on a **new disposable host**, after reviewing a successful check and
 confirming the provider's secure console/rollback path, the operator may
