@@ -92,12 +92,24 @@ loss also removes access to any Restic password or S3 key stored exclusively
 under /root. Before a clean-host rehearsal, establish that both independent
 credential sets are securely recoverable, without committing or printing them.
 
-**Next safe evidence:** Check existence, non-symlink type, owner/mode of the
-live credential environment file **without opening it**, and compare the three
-live wrapper files against their exact archived copies using digests only.
-Do not print hashes, source text, command lines or environment variable
-values. A matching script copy is evidence of snapshot fidelity, but does not
-prove execution correctness or a successful restore.
+**Next safe evidence — operator test completed:** The operator checked
+the live files without displaying secrets or digests. The environment file
+at `/root/.config/restic/maxzolotoy.env` exists as a regular file,
+belongs to root and has no group/other permissions. The `restic` binary
+resolves on the original VPS. All three live wrapper scripts are regular
+files whose SHA-256 digests **match their respective archived copies**.
+The read-only test returned exit code `0`, with SSH remaining open.
+This establishes byte-level correspondence, **not** the safety of the
+scripts' logic, independent credential custody, or clean-host recovery.
+
+**Next gate — independent credential custody:** Separately verify that
+the Restic repository location, matching decryption password, S3 endpoint/
+bucket and valid S3 access credentials can be recovered on a user-controlled
+device or from a secured password manager even if the original Selectel
+VPS is permanently unavailable. Verify independent custody/access only:
+never print live env values, paste credentials into chat, export them to
+GitHub or upload private files. The Recovery Set cannot substitute for
+this separate secret-custody check.
 
 ## Off-host credential recovery must be proven separately
 
