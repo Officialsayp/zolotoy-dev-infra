@@ -188,8 +188,9 @@ def validate_stage_target(path: Path) -> Path:
 
 def stage(directory: Path, destination: Path, records: list[tuple[tarfile.TarInfo, str]]) -> None:
     target = validate_stage_target(destination)
-    target.mkdir(mode=0o700)
+    old_umask = os.umask(0o077)
     try:
+        target.mkdir(mode=0o700)
         with tarfile.open(directory / "recovery.tar.gz", "r:gz") as source:
             # Create everything but symlinks first. All staging files are 0600:
             # original modes/owners must be reviewed during later installation.
@@ -215,8 +216,11 @@ def stage(directory: Path, destination: Path, records: list[tuple[tarfile.TarInf
                     out.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                     out.symlink_to(member.linkname)
     except BaseException:
-        shutil.rmtree(target)
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
         raise
+    finally:
+        os.umask(old_umask)
 
 
 def main() -> int:
