@@ -2,14 +2,14 @@ schema_version: 1
 project: zolotoy-dev
 snapshot_date: 2026-10-31
 
-# Repository observations only; live VPS and public DNS were not inspected.
+# Repository state plus owner-supplied read-only VPS evidence. Public DNS and clean-host rebuild remain unverified.
 services:
   frontend:
     repository: Officialsayp/zolotoy-dev-frontend
     canonical_name: zolotoy-dev-frontend
     status: implemented
     public_url: https://zolotoy.dev
-    current_hosting: live-unverified
+    current_hosting: selectel-vps-nginx-operator-observed
     deployment_code: selectel-production-and-staging
     runtime_mode: mock-first
 
@@ -55,8 +55,10 @@ observed_web_vps:
   active_web_server: nginx
   inactive_web_server: caddy
   docker: not-installed
-  tls_renewal: certbot-timer-observed-coverage-unverified
-  backup_status: timers-observed-restore-unverified
+  tls_renewal: certbot-five-certs-timer-hook-reviewed-renewal-not-yet-proven
+  backup_status: restic-offsite-snapshot-isolated-recovery-set-restore-passed
+  staging: symlink-present-local-https-200-not-in-recovery-archive
+  certbot_hook: root-owned-executable-sh-syntax-passed-real-execution-unverified
   public_dns: unverified
 
 infrastructure:
@@ -64,5 +66,5 @@ infrastructure:
   deployment_status: not-deployed
   target_provider: Selectel
   target_runtime: docker-compose-single-vps
-  edge: decision-pending-live-audit
+  edge: nginx-on-observed-web-vps-backend-placement-pending
   container_registry: decision-pending
