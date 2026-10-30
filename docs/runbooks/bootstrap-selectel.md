@@ -4,6 +4,11 @@ Status: **planned / not executed for `zolotoy.dev`**.
 
 Use this only after at least one backend service has a real image and readiness contract.
 
+For restoring the **existing static website host** instead of deploying a new backend,
+use the separate [guarded Ansible web VPS baseline](web-vps-bootstrap.md) and
+[portable VPS recovery runbook](portable-vps-migration.md). The website bootstrap
+does **not** install Docker or implement this backend plan.
+
 ## Preconditions
 
 - selected Selectel project/region/server size;
