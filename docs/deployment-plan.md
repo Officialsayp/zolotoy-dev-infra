@@ -35,7 +35,7 @@ Expected active files **later**, not placeholders now (use Nginx instead of Cadd
 ```text
 compose.yaml
 compose.production.yaml
-deploy/caddy/Caddyfile
+deploy/<selected-edge>/validated-config
 observability/prometheus/prometheus.yml
 observability/grafana/provisioning/...
 ```
@@ -44,7 +44,7 @@ Add only the files that can be validated against real images/config.
 
 ## GitHub Actions baseline
 
-When deployment automation is introduced:
+When deployment automation is introduced (the two existing website deployment workflows are separate and must not be duplicated):
 
 - `permissions: contents: read` unless more is genuinely needed;
 - use a GitHub Environment named `production` for production secrets/gates;
