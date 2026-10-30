@@ -16,6 +16,8 @@ REQUIRED = [
     'docs/runbooks/recovery-archive-staging.md',
     'docs/runbooks/nginx-reviewed-restore.md', 'scripts/restore_nginx.py',
     'tests/test_restore_nginx.py',
+    'scripts/review_certbot_systemd.py', 'tests/test_review_certbot_systemd.py',
+    'docs/runbooks/certbot-systemd-recovery.md',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
