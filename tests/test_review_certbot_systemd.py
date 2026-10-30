@@ -37,9 +37,7 @@ def fixtures() -> tuple[dict[str, tuple[bytes, int, int]], dict[str, str]]:
         0o750, 0
     )
     for base, script in review.BACKUP_SERVICES.items():
-        # Synthetic guess for test fixture ONLY; unknown real ExecStart remains
-        # unresolved in the audit, irrespective of this placeholder string.
-        sample_exec = f"/{script}" if script else "/usr/local/sbin/site-recovery.py check"
+        sample_exec = f"/{script}"
         files[f"etc/systemd/system/{base}.service"] = (
             (f"[Unit]\nDescription=Example\n[Service]\n"
              f"Type=oneshot\nExecStart={sample_exec}\n").encode(),
@@ -50,8 +48,7 @@ def fixtures() -> tuple[dict[str, tuple[bytes, int, int]], dict[str, str]]:
              f"OnCalendar=daily\nUnit={base}.service\n").encode(),
             0o644, 0
         )
-        if script is not None:
-            files[script] = (b"#!/bin/sh\nexit 0\n", 0o750, 0)
+        files[script] = (b"#!/bin/sh\nexit 0\n", 0o750, 0)
     return files, links
 
 
@@ -100,12 +97,9 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
     def test_all_synthetic_components_present_and_valid(self):
         result = self.run_review()
         self.assertTrue(result["known_scope_checks_pass"])
-        self.assertFalse(result["static_review_complete"])
-        self.assertEqual(
-            result["systemd"]["execstart_manual_review_needed_for"],
-            ["maxzolotoy-restic-check"],
-        )
-        self.assertIsNone(result["systemd"]["backup_units"][1]["service_references_expected_script"])
+        self.assertTrue(result["static_review_complete"])
+        self.assertEqual(result["systemd"]["execstart_manual_review_needed_for"], [])
+        self.assertTrue(result["systemd"]["backup_units"][1]["service_references_expected_script"])
         self.assertFalse(result["safe_to_apply_without_further_review"])
         self.assertEqual(len(result["certbot"]["renewal_profiles"]), 5)
         self.assertTrue(all(row["live_privkey_present"] for row in result["certbot"]["certificate_paths"]))
@@ -130,17 +124,14 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         self.assertFalse(report["symlink_targets_extraction_safe"])
         self.assertFalse(report["safe_to_apply_without_further_review"])
 
-    def test_failures_only_keeps_unknown_exec_out_of_failed_checks(self):
+    def test_failures_only_reports_confirmed_script_path(self):
         result = review.summarize(self.run_review())
         self.assertEqual(result["failed_known_checks"], [])
         self.assertEqual(result["webroot_evidence_sources"], {
             "webroot_map": 0, "webroot_path": 5, "missing": 0,
         })
-        self.assertEqual(
-            result["unresolved_manual_reviews"],
-            ["systemd.execstart.maxzolotoy-restic-check"],
-        )
-        self.assertFalse(result["static_review_complete"])
+        self.assertEqual(result["unresolved_manual_reviews"], [])
+        self.assertTrue(result["static_review_complete"])
 
     def test_failures_only_reports_mismatched_webroot_and_hook(self):
         files, links = fixtures()
@@ -304,13 +295,73 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         self.assertFalse(report["certbot"]["deploy_hook"]["strict_failure_handling"])
         self.assertFalse(report["known_scope_checks_pass"])
 
-    def test_restic_check_exec_is_never_assumed_verified(self):
+    def test_restic_check_exec_matches_observed_archived_wrapper(self):
         report = self.run_review()
         check_service = report["systemd"]["backup_units"][1]
         self.assertTrue(check_service["execstart_present"])
-        self.assertTrue(check_service["execstart_requires_manual_review"])
-        self.assertIsNone(check_service["script_regular_file"])
-        self.assertIsNone(check_service["service_references_expected_script"])
+        self.assertFalse(check_service["execstart_requires_manual_review"])
+        self.assertTrue(check_service["script_regular_file"])
+        self.assertTrue(check_service["service_references_expected_script"])
+        self.assertTrue(check_service["script_root_owned_safe_mode"])
+        self.assertTrue(check_service["script_executable"])
+
+    def test_restic_check_exec_rejects_same_name_in_wrong_directory(self):
+        files, links = fixtures()
+        path = "etc/systemd/system/maxzolotoy-restic-check.service"
+        payload, mode, uid = files[path]
+        files[path] = (
+            payload.replace(
+                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check",
+                b"ExecStart=/tmp/maxzolotoy-restic-check"
+            ), mode, uid
+        )
+        report = self.run_review(files, links)
+        self.assertFalse(report["known_scope_checks_pass"])
+        self.assertFalse(report["systemd"]["backup_units"][1]["service_references_expected_script"])
+
+    def test_restic_check_wrapper_must_be_root_owned_and_executable(self):
+        files, links = fixtures()
+        path = review.BACKUP_SERVICES["maxzolotoy-restic-check"]
+        payload, _, _ = files[path]
+        files[path] = (payload, 0o666, 1000)
+        report = review.summarize(self.run_review(files, links))
+        self.assertFalse(report["known_scope_checks_pass"])
+        self.assertIn(
+            "systemd.backup_units.maxzolotoy-restic-check.script_executable",
+            report["failed_known_checks"],
+        )
+        self.assertIn(
+            "systemd.backup_units.maxzolotoy-restic-check.script_root_owned_safe_mode",
+            report["failed_known_checks"],
+        )
+
+    def test_restic_check_extra_arguments_require_manual_review(self):
+        files, links = fixtures()
+        path = "etc/systemd/system/maxzolotoy-restic-check.service"
+        payload, mode, uid = files[path]
+        files[path] = (
+            payload.replace(
+                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check\\n",
+                b"ExecStart=/usr/local/sbin/maxzolotoy-restic-check --custom\\n",
+            ), mode, uid
+        )
+        report = self.run_review(files, links)
+        unit = report["systemd"]["backup_units"][1]
+        self.assertTrue(unit["execstart_requires_manual_review"])
+        self.assertTrue(unit["execstart_additional_arguments_present"])
+        self.assertFalse(report["static_review_complete"])
+        self.assertIn(
+            "maxzolotoy-restic-check",
+            report["systemd"]["execstart_manual_review_needed_for"],
+        )
+
+    def test_matcher_does_not_accept_execstart_embedded_substrings(self):
+        matches, extra = review.execstart_binary_matches(
+            "/usr/bin/echo /usr/local/sbin/maxzolotoy-restic-check",
+            "usr/local/sbin/maxzolotoy-restic-check",
+        )
+        self.assertFalse(matches)
+        self.assertTrue(extra)
 
     def test_missing_backup_timer_marks_review_incomplete(self):
         files, links = fixtures()
