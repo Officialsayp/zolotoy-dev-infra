@@ -40,12 +40,14 @@ This is another **operator-provided read-only observation**, not a renewal simul
 - On 2026-10-30 the off-site job logged four new recovery-set completions at 20:19, 20:21, 20:54 and 21:19 UTC; the latest reported `Recovery set complete: 20261030T211925.555690Z bytes: 1402955` and `Offsite snapshot: cb709afa...`. The journal also reported `Restic full data check passed` at 21:19:38 UTC. These are stronger evidence that snapshots exist and a check ran than service exit status alone; **snapshot content coverage, the check command actually run and an isolated restore are still unverified**.
 - The current `certbot.timer` uses `authenticator = webroot` with `webroot_path = /var/lib/letsencrypt` for all five names. Confirm Nginx serves the ACME challenge path from this webroot on port 80, and verify actual unattended renewal plus reload hook before calling renewal proven.
 
+- Follow-up read-only inspection of systemd units found `maxzolotoy-offsite-backup.service` invokes `/usr/local/sbin/maxzolotoy-offsite-backup`, which last exited successfully at 2026-10-30 21:19 UTC. `maxzolotoy-config-backup.service` invokes `/usr/local/sbin/maxzolotoy-config-backup`, but had no recorded invocation (`start_time=[n/a]`). The contents of the new off-site script are **not yet reviewed**; successful recovery-set logs are not proof that all Nginx/Certbot/site/systemd files are included.
+- The user's `grep -Rn 'acme-challenge' /etc/nginx/sites-enabled /etc/nginx/conf.d` produced no matches. This **does not establish missing ACME routing**: an ordinary Nginx root or another include may serve the challenge. Confirm the effective Nginx configuration and HTTP webroot mapping before running any renewal dry-run.
+
 Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
 
-Next read-only validation priorities: `certbot certificates` or equivalent active certificate
-inventory (without private keys); public TLS certificate expiry/SAN check for each domain; Certbot
-renewal configuration and last-success logs; latest successful backup snapshot and an isolated
-restore test; actual DNS A/AAAA/proxy mode and the active Nginx include tree. Do not publish
+Next read-only validation priorities: contents/backup input selection of the actual off-site script;
+last off-site snapshot file manifest; effective Nginx ACME webroot and Certbot renewal hooks;
+restore to an isolated destination; actual DNS A/AAAA/proxy mode and public TLS checks. Do not publish
 unredacted configuration, credential files, or private keys.
 
 The existing 1 GiB/10 GiB host is suitable only for the currently observed lightweight web
