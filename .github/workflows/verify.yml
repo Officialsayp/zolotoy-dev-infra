@@ -18,5 +18,11 @@ jobs:
           fetch-depth: 2
       - name: Validate documentation, links, inventory safety and secret-file rules
         run: python3 scripts/check_docs.py
+      - name: Validate Ansible baseline syntax (no remote connection)
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/infra-ansible"
+          "$RUNNER_TEMP/infra-ansible/bin/python" -m pip install --disable-pip-version-check -r iac/requirements.txt
+          "$RUNNER_TEMP/infra-ansible/bin/ansible-playbook" --syntax-check iac/web-baseline.yml
       - name: Check whitespace errors in latest change
         run: git diff --check HEAD^ HEAD
