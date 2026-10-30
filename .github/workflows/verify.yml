@@ -28,5 +28,6 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_*.py' -v
           python3 -m py_compile scripts/recovery_archive.py
+          python3 -m py_compile scripts/restore_nginx.py
       - name: Check whitespace errors in latest change
         run: git diff --check HEAD^ HEAD
