@@ -10,6 +10,8 @@ REQUIRED = [
     'docs/security.md', 'docs/observability.md', 'docs/backups.md',
     'docs/runbooks/bootstrap-selectel.md', 'docs/runbooks/deploy.md',
     'docs/runbooks/rollback.md', 'docs/runbooks/portable-vps-migration.md',
+    'docs/runbooks/web-vps-bootstrap.md', 'inventory/web-vps-observed-packages.yaml',
+    'iac/web-baseline.yml', 'iac/requirements.txt',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
