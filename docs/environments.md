@@ -19,7 +19,7 @@ Principles:
 
 - immutable image versions;
 - one controlled deployment at a time;
-- only Caddy public by default;
+- only the verified active HTTP(S) edge (Caddy or Nginx) public by default;
 - secrets outside Git;
 - persistent volumes backed up before risky schema/deployment operations;
 - readiness and external smoke checks after deploy;
@@ -27,6 +27,6 @@ Principles:
 
 ## Frontend
 
-The frontend remains independently deployable. Its current Cloudflare hosting does not require moving
-to the VPS when the first backend is deployed. Backend service DNS can be introduced incrementally while
-the production frontend remains in mock mode.
+The frontend remains independently deployable, with Cloudflare and Selectel deployment tooling present in
+its repository. Verify live DNS, active host and certificate management before assuming where production
+currently runs. Backend service DNS can be introduced incrementally while the frontend uses mock mode.
