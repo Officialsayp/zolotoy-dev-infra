@@ -90,14 +90,20 @@ A later read-only inspection showed:
 - A deploy-hook file exists at
   `/etc/letsencrypt/renewal-hooks/deploy/20-nginx-reload`. Individual renewal
   profiles do not define `deploy_hook`; the hook directory is a separate supported
-  mechanism. **The hook's executable bit, contents, syntax and actual execution have
-  not yet been verified**. Do not execute it solely to inspect it.
+  mechanism. Later read-only inspection showed `root:root` ownership, mode `0750`,
+  and an executable bit. The file begins `#!/bin/sh` and contains a guarded
+  `systemctl is-active --quiet nginx` check followed by `/usr/sbin/nginx -t` and
+  `/usr/bin/systemctl reload nginx`. `bash -n` passed, but the **actual `/bin/sh`
+  syntax, error handling and hook execution during certificate replacement are not yet
+  verified**. Do not execute the hook just for inspection.
 - `/var/www/zolotoy-dev/releases/current` is an existing symlink pointing to an
-  existing directory. This confirms staging files currently exist, **not** that
-  they are included in recovery archives (they are absent from the inspected archive)
-  or externally reachable. The existing manual staging GitHub Actions workflow can
-  rebuild the artifact after a clean-host re-provisioning, but this has not been
-  rehearsed.
+  existing directory. A local TLS-verified request using `curl --resolve` to
+  `https://origin.zolotoy.dev/_health` returned **HTTP 200**, showing Nginx/TLS
+  and the staging health endpoint work locally. **No homepage HTTP status** was
+  supplied, so a complete staging application smoke test has not passed. Staging
+  remains absent from the inspected recovery archive. The existing manual staging
+  GitHub Actions workflow can rebuild the artifact after a clean-host
+  re-provisioning, but this has not been rehearsed.
 
 Next safe check: inspect permissions and non-secret logic of the deploy hook;
 check its syntax and effective systemd journal status. Separately, verify staging
