@@ -130,6 +130,33 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         self.assertFalse(report["symlink_targets_extraction_safe"])
         self.assertFalse(report["safe_to_apply_without_further_review"])
 
+    def test_failures_only_keeps_unknown_exec_out_of_failed_checks(self):
+        result = review.summarize(self.run_review())
+        self.assertEqual(result["failed_known_checks"], [])
+        self.assertEqual(
+            result["unresolved_manual_reviews"],
+            ["systemd.execstart.maxzolotoy-restic-check"],
+        )
+        self.assertFalse(result["static_review_complete"])
+
+    def test_failures_only_reports_mismatched_webroot_and_hook(self):
+        files, links = fixtures()
+        name = "etc/letsencrypt/renewal/zolotoy.dev.conf"
+        data, mode, uid = files[name]
+        files[name] = (data.replace(b"/var/lib/letsencrypt", b"/tmp/wrong"), mode, uid)
+        hook, hook_mode, hook_uid = files[review.HOOK]
+        files[review.HOOK] = (hook.replace(b"set -eu\\n", b""), hook_mode, hook_uid)
+        report = review.summarize(self.run_review(files, links))
+        self.assertIn(
+            "certbot.renewal_profiles.zolotoy.dev.expected_webroot",
+            report["failed_known_checks"],
+        )
+        self.assertIn(
+            "certbot.deploy_hook.strict_failure_handling",
+            report["failed_known_checks"],
+        )
+        self.assertNotIn("NEVER-LOG-THIS-SECRET", json.dumps(report))
+
     def test_missing_renewal_profile_marks_review_incomplete(self):
         files, links = fixtures()
         files.pop("etc/letsencrypt/renewal/zolotoy.dev.conf")
