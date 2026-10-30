@@ -23,3 +23,7 @@ backups/
 .venv/
 *.private.ini
 recovery.ini
+
+# Local Python validation artifacts
+__pycache__/
+*.pyc
