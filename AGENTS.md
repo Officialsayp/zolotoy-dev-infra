@@ -47,6 +47,12 @@ of all existing site `current` pointers. It validates `nginx -t`, retains
 a root-only rollback journal and never reloads Nginx. Certbot private keys,
 systemd activation and live site cutover require separate review.
 
+`review_certbot_systemd.py` audits selected metadata from an already verified,
+locally protected Recovery Set without extracting key material, printing raw
+configuration values or executing system services. It must never be extended
+to automatically install TLS private keys, run Certbot renewal, enable timers,
+or modify the live VPS without a separate explicit authorization.
+
 ## Target principles
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
