@@ -79,6 +79,20 @@ The existing 1 GiB/10 GiB host is suitable only for the currently observed light
 workloads without a measured capacity assessment. Do **not** assume it can host Kafka, PostgreSQL,
 Redis, monitoring and four Go services simultaneously. Size a replacement based on real needs.
 
+## Historical Caddy PR guard (2026-10-31)
+
+The frontend repository currently has open
+[PR #23](https://github.com/Officialsayp/zolotoy-dev-frontend/pull/23) describing
+an observed 2026-10-30 live **Caddy + lego** baseline and a proposed Caddy
+Automatic HTTPS migration. This conflicts with the *later* 2026-10-31
+operator-provided host evidence of **Nginx active** and **Certbot configured for
+all five names**. PR #23 is a historical/alternative design candidate; do
+**not** interpret its source, Caddy TLS unit or instructions as live desired
+configuration, nor execute the Caddy migration or timer changes without a
+fresh audit and separate authorization. The frontend staging workflow already
+checks that **Nginx** is active, so its repeat-deploy design is compatible with
+the new edge *if* exact routing files, modules and credentials are restored.
+
 ## Scope and recovery boundaries
 
 - maxzolotoy.com: Officialsayp/saypix, static releases under /var/www/maxzolotoy/releases and atomic /var/www/maxzolotoy/current. Both Caddy and Nginx source profiles exist.
