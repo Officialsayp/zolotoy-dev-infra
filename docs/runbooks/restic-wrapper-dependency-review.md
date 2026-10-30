@@ -151,6 +151,11 @@ terminal output should be placed in the PR, chat, scripts or CI. Avoid
 printing credentials with echo, shell tracing or command-line arguments.
 Do not mark independent-credential recovery verified before this succeeds.
 
+The [independent macOS S3 snapshot access runbook](independent-macos-restic-restore.md)
+provides a no-lock/no-cache, read-only test using independently entered
+credentials. The owner reports securely saving the existing Restic password
+on the Mac, but no cross-host access test has passed yet.
+
 ## Remaining independently approved gates
 
 1. The owner runs the new read-only inspector on the genuine Recovery Set
