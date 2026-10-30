@@ -32,7 +32,7 @@ As verified from repository contents on 2026-10-31 (not from a live VPS audit):
 - there is still no verified backend production Compose, registry image or deploy workflow in this repository;
 - see [portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md) before moving either site.
 
-The first active Compose/Caddy/deployment files should be added when there is at least one published,
+The first active Compose/edge/deployment files should be added when there is at least one published,
 smoke-testable backend service image.
 
 ## Planned edge topology
@@ -52,7 +52,7 @@ The backend reverse proxy decision remains conditional on a live VPS audit: both
 profiles exist in the website repos. Reuse the currently validated edge and its TLS/deploy contract;
 do not force a migration solely to introduce backend services.
 
-Only Caddy should expose public `80/443` on the single-VPS baseline. PostgreSQL, Redis, Kafka,
+Only the selected HTTP(S) edge (Caddy or Nginx) should expose public `80/443` on the single-VPS baseline. PostgreSQL, Redis, Kafka,
 Prometheus metrics endpoints and service container ports remain internal unless an explicit
 operational requirement says otherwise.
 
@@ -102,7 +102,7 @@ python scripts/check_docs.py
 git diff --check
 ```
 
-When active Compose/Caddy/Terraform files are introduced, extend verification in the same change
+When active Compose/edge/IaC files are introduced, extend verification in the same change
 (e.g. `docker compose config`, `caddy validate`, `terraform validate`) and document the exact command.
 
 ## No secrets in Git
