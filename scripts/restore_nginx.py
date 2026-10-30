@@ -305,9 +305,17 @@ def main() -> int:
                                     capture_output=True, timeout=20)
             return result.returncode == 0
 
-        lock = Path("/run/lock/zolotoy-reviewed-nginx.lock")
-        with lock.open("a+") as handle:
-            os.chmod(lock, 0o600)
+        private_root = Path("/var/backups/site-recovery")
+        if (private_root.is_symlink() or not private_root.is_dir()
+                or stat.S_IMODE(private_root.stat().st_mode) & 0o077):
+            raise RestoreError("Root-only backup/lock directory must be mode 0700")
+        lock = private_root / ".reviewed-nginx.lock"
+        fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "a+") as handle:
+            lock_stat = os.fstat(handle.fileno())
+            if (not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_uid != 0
+                    or stat.S_IMODE(lock_stat.st_mode) & 0o077):
+                raise RestoreError("Unsafe recovery lock file")
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
