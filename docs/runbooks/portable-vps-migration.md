@@ -11,6 +11,32 @@ Related source-of-truth documents:
 
 These documents include historical Caddy instructions and later Nginx profiles. **Which web server and certificate renewal mechanism are actually active must be read from the existing VPS**; repository files alone do not prove installed state.
 
+## Operator-observed VPS baseline (2026-10-31)
+
+The owner supplied read-only terminal output from the current Selectel VPS on 2026-10-31. This is
+**observational evidence for that host only**, not an independent agent SSH audit or public DNS check:
+
+- Ubuntu 26.04.1 LTS, x86_64; 956 MiB RAM, no swap; 9.8 GiB root filesystem with 5.7 GiB available.
+- Nginx **active/enabled**, listening on TCP 80/443 on IPv4/IPv6; Caddy **inactive/disabled**.
+- `nginx -t` passed; `caddy validate` also passed but **does not mean Caddy is serving traffic**.
+- Active symlinks exist for `/var/www/maxzolotoy/current`,
+  `/var/www/zolotoy-dev-production/current`, and `/var/www/zolotoy-dev/releases/current`.
+- Docker is **not installed**; no Docker Compose or backend container deployment can currently run there.
+- Timers listed: `certbot.timer`, `maxzolotoy-offsite-backup.timer`,
+  `maxzolotoy-restic-check.timer`. Their presence **does not prove renewal or backup success**.
+- The previously documented `zolotoy-dev-certificate.timer` was **not present in the supplied
+  filtered timer listing**. The current renewal mechanism for every domain must be established.
+
+Next read-only validation priorities: `certbot certificates` or equivalent active certificate
+inventory (without private keys); public TLS certificate expiry/SAN check for each domain; Certbot
+renewal configuration and last-success logs; latest successful backup snapshot and an isolated
+restore test; actual DNS A/AAAA/proxy mode and the active Nginx include tree. Do not publish
+unredacted configuration, credential files, or private keys.
+
+The existing 1 GiB/10 GiB host is suitable only for the currently observed lightweight web
+workloads without a measured capacity assessment. Do **not** assume it can host Kafka, PostgreSQL,
+Redis, monitoring and four Go services simultaneously. Size a replacement based on real needs.
+
 ## Scope and recovery boundaries
 
 - maxzolotoy.com: Officialsayp/saypix, static releases under /var/www/maxzolotoy/releases and atomic /var/www/maxzolotoy/current. Both Caddy and Nginx source profiles exist.
