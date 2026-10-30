@@ -258,13 +258,67 @@ def review(recovery_set: Path) -> dict[str, Any]:
     return result
 
 
+def summarize(result: dict[str, Any]) -> dict[str, Any]:
+    """Return only allowlisted false checks; never include unit command values."""
+    failed: list[str] = []
+    for profile in result["certbot"]["renewal_profiles"]:
+        name = profile["name"]
+        for key in ("present", "webroot_authenticator", "expected_webroot"):
+            if profile.get(key) is not True:
+                failed.append(f"certbot.renewal_profiles.{name}.{key}")
+    for path in result["certbot"]["certificate_paths"]:
+        name = path["name"]
+        for key in ("live_fullchain_present", "live_privkey_present"):
+            if path.get(key) is not True:
+                failed.append(f"certbot.certificate_paths.{name}.{key}")
+    for key, value in result["certbot"]["deploy_hook"].items():
+        if value is not True:
+            failed.append(f"certbot.deploy_hook.{key}")
+    basic_unit_keys = (
+        "service_regular_file", "timer_regular_file", "service_safe_owner_mode",
+        "timer_safe_owner_mode", "execstart_present", "has_timer_schedule",
+    )
+    for unit in result["systemd"]["backup_units"]:
+        name = unit["unit"]
+        for key in basic_unit_keys:
+            if unit.get(key) is not True:
+                failed.append(f"systemd.backup_units.{name}.{key}")
+        # Explicitly null=unreviewed for unknown ExecStart; never call it failed.
+        if not unit["execstart_requires_manual_review"]:
+            for key in ("service_references_expected_script", "script_regular_file"):
+                if unit.get(key) is not True:
+                    failed.append(f"systemd.backup_units.{name}.{key}")
+    for key in ("unit_state_inventory_present", "package_inventory_present"):
+        if result["systemd"].get(key) is not True:
+            failed.append(f"systemd.{key}")
+    return {
+        "schema": 1,
+        "mode": "failures-only-read-only",
+        "recovery_archive_hash_and_structure": result["recovery_archive_hash_and_structure"],
+        "known_scope_checks_pass": result["known_scope_checks_pass"],
+        "static_review_complete": result["static_review_complete"],
+        "safe_to_apply_without_further_review": False,
+        "failed_known_checks": failed,
+        "unresolved_manual_reviews": [
+            f"systemd.execstart.{name}"
+            for name in result["systemd"]["execstart_manual_review_needed_for"]
+        ],
+        "note": "This is a static archive audit, not certificate renewal or restore approval",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("recovery_set", type=Path)
+    parser.add_argument(
+        "--failures-only", action="store_true",
+        help="Emit only failed known checks and unresolved review items; never raw configs",
+    )
     args = parser.parse_args()
     try:
         result = review(args.recovery_set)
-        print(json.dumps(result, indent=2, sort_keys=True))
+        print(json.dumps(summarize(result) if args.failures_only else result,
+                         indent=2, sort_keys=True))
         return 0
     except (RecoveryError, OSError, ValueError, KeyError, tarfile.TarError) as exc:
         # In particular, never print potentially secret source lines or paths
