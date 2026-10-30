@@ -73,6 +73,55 @@ def section_values(text: str, section: str, allowed_keys: tuple[str, ...]) -> di
     return result
 
 
+def inspect_webroot(text: str | None, domain: str) -> tuple[str, bool]:
+    """Inspect Certbot's stored webroot without exposing its raw paths.
+
+    Certbot uses either webroot_path (sometimes a comma-terminated
+    ConfigObj list) or a domain-specific [[webroot_map]] under [renewalparams].
+    A domain-specific map entry takes precedence over the generic path.
+    Conflicting duplicate values never pass.
+    """
+    if text is None:
+        return "missing", False
+    top_section = ""
+    nested_section = None
+    plain_paths: list[str] = []
+    mapped_paths: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        top = re.fullmatch(r"\[([^\[\]]+)\]", line)
+        if top:
+            top_section = top.group(1).strip()
+            nested_section = None
+            continue
+        nested = re.fullmatch(r"\[\[([^\[\]]+)\]\]", line)
+        if nested:
+            nested_section = nested.group(1).strip()
+            continue
+        if top_section != "renewalparams" or "=" not in line:
+            continue
+        key, value = (part.strip() for part in line.split("=", 1))
+        if nested_section == "webroot_map" and key == domain:
+            mapped_paths.append(value)
+        elif nested_section is None and key == "webroot_path":
+            plain_paths.append(value)
+
+    def exact(values: list[str]) -> bool:
+        if len(values) != 1:
+            return False
+        # Certbot/ConfigObj often serializes one webroot path as
+        # '/var/lib/letsencrypt,'; do not accept a list with two paths.
+        return values[0].rstrip(",").strip() == "/var/lib/letsencrypt"
+
+    if mapped_paths:
+        return "webroot_map", exact(mapped_paths)
+    if plain_paths:
+        return "webroot_path", exact(plain_paths)
+    return "missing", False
+
+
 def owner_and_mode(member: tarfile.TarInfo) -> bool:
     return member.uid == 0 and member.gid == 0 and (member.mode & 0o022) == 0
 
@@ -155,11 +204,15 @@ def review(recovery_set: Path) -> dict[str, Any]:
             options = section_values(
                 limited_text(archive, conf), "renewalparams", ("authenticator", "webroot_path")
             ) if conf and conf.isfile() and conf.size <= CONFIG_LIMIT else {}
+            webroot_source, expected_webroot = inspect_webroot(
+                limited_text(archive, conf) if conf and conf.isfile() else None, name
+            )
             profiles.append({
                 "name": name,
                 "present": bool(conf and conf.isfile()),
                 "webroot_authenticator": options.get("authenticator") == "webroot",
-                "expected_webroot": options.get("webroot_path") == "/var/lib/letsencrypt",
+                "webroot_source": webroot_source,
+                "expected_webroot": expected_webroot,
             })
             fullchain = members.get(f"etc/letsencrypt/live/{name}/fullchain.pem")
             privkey = members.get(f"etc/letsencrypt/live/{name}/privkey.pem")
