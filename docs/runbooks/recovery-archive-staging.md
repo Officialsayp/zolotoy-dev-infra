@@ -82,6 +82,49 @@ and must not be blindly replicated inside a private staging directory.
 The original strict `verify_set` and `--stage-dir` paths continue to reject
 all absolute symlinks.
 
+## Operator-supplied real archive symlink inventory (2026-10-31)
+
+The operator ran the aggregate-only diagnostic against the exact protected
+Recovery Set. Reported: **681 archive entries and 112 symbolic links**; SHA-256
+and compressed length matched the manifest. There were **zero malformed member
+names**. The symlinks broke down as:
+
+- 22 relative targets represented inside the archived tree;
+- 6 absolute targets represented in the archive;
+- 83 absolute targets **not represented in the archive**;
+- 1 relative target not represented in the archive.
+
+**79 of the 83 external absolute link targets originate in systemd**, with 3
+from Nginx and 1 elsewhere. This may be normal systemd enablement linking to
+package-managed unit files, but it is **not proof** those targets are available
+or correct on a replacement VPS. Do not misclassify all 83 as damaged or treat
+them as safe to extract.
+
+### Separate read-only metadata verification from extraction
+
+The original strict `verify_set` still rejects absolute and unresolved links,
+because extracting those links unchanged could escape a private staging root.
+The newer command below allows their presence **only as archival metadata**:
+
+```bash
+python3 -B scripts/recovery_archive.py \
+  /var/backups/site-recovery/20261030T211925.555690Z \
+  --metadata-only
+```
+
+It verifies the manifest SHA-256, archive size, member paths, duplicate paths,
+types, member count, expanded-size limits, and file/symlink parent safety. It
+does **not** certify the symlink target, issue a restore approval, or extract
+anything. Output must explicitly include `safe_to_stage: false`. Tests ensure
+that handing metadata-only records to the staging function cannot bypass the
+strict link guard.
+
+The separate `review_certbot_systemd.py` inspector now calls metadata-only
+verification to read selected configuration evidence safely. It will still
+return `safe_to_apply_without_further_review: false`. Running both scripts
+against the protected real archive is a **read-only acceptance test**, not a
+clean-host disaster-recovery rehearsal.
+
 ## Second: optional private staging on a NEW isolated host
 
 Only if there is a concrete recovery need and protected local storage,
