@@ -1,0 +1,21 @@
+name: Verify infrastructure repository
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate documentation, links, inventory safety and secret-file rules
+        run: python3 scripts/check_docs.py
+      - name: Check whitespace errors in latest change
+        run: git diff --check HEAD^ HEAD
