@@ -27,6 +27,11 @@ material. It cannot install or enable any service or contact Let's Encrypt.
 Checks include:
 - Five named renewal profiles for both sites (including their www/origin names);
   the archived webroot authenticator and expected /var/lib/letsencrypt webroot.
+  Certbot supports either `webroot_path` (sometimes a comma-terminated
+  ConfigObj list) or a per-domain `[[webroot_map]]` under `[renewalparams]`.
+  For a given domain, a map entry takes precedence. The inspector accepts
+  only one unambiguous effective matching root and exposes only the source
+  category and Boolean match, never the raw renewal path.
 - Presence of live certificate/fullchain/private-key paths, without reading keys.
 - Presence, archived owner/mode, executable bit, POSIX syntax and expected
   guarded nginx syntax-check/reload lines in the deploy hook.
@@ -107,9 +112,26 @@ python3 -B scripts/review_certbot_systemd.py \
 
 A successful process exit means the report was generated; it does **not**
 mean all checks passed. When `known_scope_checks_pass` is false, inspect
-`failed_known_checks`. The separate `unresolved_manual_reviews` list
+`failed_known_checks`. The `webroot_evidence_sources` object counts which
+supported representation was found; it does not expose any actual paths.
+The separate `unresolved_manual_reviews` list
 contains unknown facts (such as the Restic-check ExecStart) and is **not**
 silently interpreted as a failed script.
+
+## Real Recovery Set — webroot compatibility finding (2026-10-31)
+
+An operator ran the read-only inspector against the protected live-host
+Recovery Set. All five renewal profiles reported `expected_webroot=false`
+while other known-scope checks passed. The old inspector compared only the
+literal scalar `webroot_path=/var/lib/letsencrypt`; therefore this is **not
+evidence of misconfigured Certbot**. Certbot serializations can include a
+trailing comma or a nested per-domain `[[webroot_map]]`. The updated parser
+handles both forms, keeps map precedence, and rejects conflicting values.
+
+**Status:** no confirmed outcome yet for the updated parser against the real
+archive. Repeat only the read-only `--failures-only` command from the exact
+CI-verified commit. A successful static comparison still does **not** prove
+unattended ACME renewal, DNS reachability or correct Nginx challenge delivery.
 
 ## Controlled Certbot restoration — separate operator approval required
 
