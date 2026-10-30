@@ -13,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -144,6 +145,40 @@ class RecoveryArchiveTest(unittest.TestCase):
         target.mkdir()
         with self.assertRaises(recovery.RecoveryError):
             recovery.validate_stage_target(target)
+
+    def test_stage_does_not_delete_directory_created_by_racing_process(self):
+        source = make_set(self.root)
+        entries, _ = recovery.verify_set(source)
+        target = self.root / "racing-directory"
+        original_mkdir = Path.mkdir
+
+        def simulate_race(path, *args, **kwargs):
+            if path == target:
+                original_mkdir(path, mode=0o700)
+                raise FileExistsError("Simulated competing creation")
+            return original_mkdir(path, *args, **kwargs)
+
+        with patch.object(Path, "mkdir", autospec=True, side_effect=simulate_race):
+            with self.assertRaises(FileExistsError):
+                recovery.stage(source, target, entries)
+        self.assertTrue(target.is_dir(), "Must not remove a directory we did not create")
+
+    def test_repeated_archive_member_rejected(self):
+        source = self.root / "set"
+        source.mkdir()
+        archive_path = source / "recovery.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as archive:
+            for _ in range(2):
+                info = tarfile.TarInfo("etc/nginx/nginx.conf")
+                info.size = 1
+                archive.addfile(info, io.BytesIO(b"x"))
+        (source / "manifest.json").write_text(json.dumps({
+            "schema": 1,
+            "sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+            "bytes": archive_path.stat().st_size,
+        }))
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.verify_set(source)
 
     def test_stage_target_outside_tmp_rejected(self):
         with self.assertRaises(recovery.RecoveryError):
