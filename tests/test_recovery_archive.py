@@ -194,6 +194,45 @@ class RecoveryArchiveTest(unittest.TestCase):
         self.assertEqual(report["symlink_target_categories"]["unsafe_member_name"], 1)
         self.assertNotIn("private_link", json.dumps(report))
 
+    def test_metadata_only_passes_absolute_symlinks_but_strict_refuses(self):
+        links = {
+            "etc/nginx/sites-enabled/main": "/etc/nginx/nginx.conf",
+            "etc/systemd/system/example.timer": "/lib/systemd/system/example.timer",
+        }
+        source = make_set(self.root, links=links)
+        records, counts = recovery.verify_set(source, metadata_only=True)
+        self.assertEqual(counts["symlinks"], 2)
+        self.assertEqual(len(records), len(FILES) + 2)
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.verify_set(source)
+
+    def test_metadata_only_does_not_allow_staging_absolute_symlinks(self):
+        source = make_set(
+            self.root,
+            links={"etc/nginx/sites-enabled/main": "/etc/nginx/nginx.conf"},
+        )
+        records, _ = recovery.verify_set(source, metadata_only=True)
+        destination = self.root / "unsafe-stage"
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.stage(source, destination, records)
+        self.assertFalse(destination.exists())
+
+    def test_metadata_only_rejects_hardlink_and_path_traversal(self):
+        source = make_set(
+            self.root, files={"../../unsafe": b"foo"}, links={}
+        )
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.verify_set(source, metadata_only=True)
+
+    def test_metadata_only_rejects_child_of_archived_symlink(self):
+        source = make_set(
+            self.root,
+            files={"etc/nginx/link/child.conf": b"foo"},
+            links={"etc/nginx/link": "/etc/nginx"},
+        )
+        with self.assertRaises(recovery.RecoveryError):
+            recovery.verify_set(source, metadata_only=True)
+
     def test_existing_stage_target_rejected(self):
         target = self.root / "already-exists"
         target.mkdir()
