@@ -17,7 +17,6 @@ import stat
 import sys
 import tarfile
 from collections import Counter
-import json
 from pathlib import Path, PurePosixPath
 
 MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
