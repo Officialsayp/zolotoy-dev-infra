@@ -11,7 +11,7 @@ protected four-file Recovery Set. The owner has confirmed the recovery set's
 SHA-256 and size, performed an isolated restore from encrypted Restic storage,
 and passed a narrow real-archive static Certbot/systemd inspection.
 
-Three root-owned script paths in the Recovery Set are known:
+Three candidate script paths in the Recovery Set are known; the new inspector must still verify each archived file's owner and mode:
 
 - /usr/local/sbin/maxzolotoy-offsite-backup
 - /usr/local/sbin/maxzolotoy-restic-check
