@@ -24,8 +24,7 @@ The owner supplied read-only terminal output from the current Selectel VPS on 20
 - Docker is **not installed**; no Docker Compose or backend container deployment can currently run there.
 - Timers listed: `certbot.timer`, `maxzolotoy-offsite-backup.timer`,
   `maxzolotoy-restic-check.timer`. Their presence **does not prove renewal or backup success**.
-- The previously documented `zolotoy-dev-certificate.timer` was **not present in the supplied
-  filtered timer listing**. The current renewal mechanism for every domain must be established.
+- A later systemd inventory identified `zolotoy-dev-certificate.timer` as **installed but disabled**. It was absent from the filtered *active timer schedule*, not absent from the host. All five Certbot renewal configurations exist; the installed legacy timer must remain disabled pending live renewal verification.
 
 ### TLS and backup evidence from owner-supplied VPS output (2026-10-31)
 
@@ -45,6 +44,13 @@ This is another **operator-provided read-only observation**, not a renewal simul
 
 - The latest local recovery directory, `/var/backups/site-recovery/20261030T211925.555690Z/`, contains `recovery.tar.gz` (1,402,955 bytes), `manifest.json` (2,113 bytes), `systemd-unit-states.txt` (23,756 bytes), and `packages.tsv` (18,235 bytes). Earlier local recovery directories were created at 20:19, 20:21 and 20:54 UTC. Package inventory appears in the two newest directories only. The data proves these files exist locally; **archive contents, manifest semantics, local file permissions, secret exposure and off-site fidelity are unverified**.
 - The recovery implementation uses `/usr/local/sbin/site-recovery.py` with functions named `local`, `restic`, `offsite`, `rotate`, `lock` and references to both site backup paths. Function names and path references are evidence of intended design, **not** evidence that both sites, nginx/TLS configuration or certificates are actually covered. A local tarball may contain plaintext secrets even when the remote Restic repository is encrypted.
+
+### Latest local recovery archive verification (owner output, 2026-10-31)
+
+- `/var/backups/site-recovery/20261030T211925.555690Z/recovery.tar.gz`: 1,402,955 compressed bytes; 426 regular archive files totaling 4,180,077 uncompressed bytes. Archive-member classification found Nginx (15), Let's Encrypt (39), systemd (17), local system scripts (10), `maxzolotoy` site (37), `zolotoy-dev-production` (219), firewall (13), SSH config (14) and **zero regular files under `/var/www/zolotoy-dev/` staging**. These category totals may overlap and do not count symlinks; they are not a complete restore validation.
+- The local recovery-set directory has `0700` permissions; its four listed artifacts (`recovery.tar.gz`, `manifest.json`, `packages.tsv`, `systemd-unit-states.txt`) are owned by root and have `0600` permissions. This restricts conventional discretionary access to local backups, which may contain private keys.
+- The manifest has keys `bytes`, `created`, `excludes`, `parent_directories`, `paths`, `schema`, `sha256`, `sites`; no contents or checksums have yet been validated against a recovered archive.
+- Investigate whether staging is intentionally excluded and 100% reproducible via the existing frontend staging deploy, including symlinks and Nginx routing, before treating it as acceptable. Verify exact file contents/required permissions, local archive integrity, remote Restic snapshot coverage and a **separate-directory restore** prior to claiming a portable rebuild.
 
 Before claiming portability, verify the active Certbot renewal definitions/schedule, a non-disruptive renewal test when authorized, backup job inputs and latest off-site snapshots, and a restoration to an isolated destination.
 
