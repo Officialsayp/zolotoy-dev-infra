@@ -89,7 +89,14 @@ def resolve_link(name: str, target: str) -> str:
     return resolved
 
 
-def inspect_members(archive: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], Counter]:
+def inspect_members(
+    archive: Path, *, metadata_only: bool = False
+) -> tuple[list[tuple[tarfile.TarInfo, str]], Counter]:
+    """Audit tar metadata. Metadata-only mode NEVER validates link targets for extraction.
+
+    A successful metadata-only result means only safe member paths/types/counts:
+    absolute, dangling or external symlinks are intentionally NOT extraction-safe.
+    """
     if not regular_file(archive) or archive.stat().st_size > MAX_ARCHIVE_BYTES:
         raise RecoveryError("Archive missing, non-regular or exceeds safety limit")
     records = []
@@ -134,14 +141,17 @@ def inspect_members(archive: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], C
                     raise RecoveryError("Archive entry is nested under a file/symlink")
                 parent = parent.parent
 
-        for name, link in links.items():
-            target = resolve_link(name, link)
-            if kinds.get(target) in ("file", "directory"):
-                continue
-            if target in links:
-                raise RecoveryError("Chained archive symlink requires manual review")
-            if not any(p.startswith(target + "/") for p in paths):
-                raise RecoveryError("Symlink target missing from archive")
+        # Unsafe absolute/external links are valid inventory *data*, but must
+        # continue to block staged extraction. Do not weaken strict mode.
+        if not metadata_only:
+            for name, link in links.items():
+                target = resolve_link(name, link)
+                if kinds.get(target) in ("file", "directory"):
+                    continue
+                if target in links:
+                    raise RecoveryError("Chained archive symlink requires manual review")
+                if not any(p.startswith(target + "/") for p in paths):
+                    raise RecoveryError("Symlink target missing from archive")
 
     counts = Counter()
     for member, name in records:
@@ -159,7 +169,10 @@ def inspect_members(archive: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], C
     return records, counts
 
 
-def verify_set(directory: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], Counter]:
+def verify_set(
+    directory: Path, *, metadata_only: bool = False
+) -> tuple[list[tuple[tarfile.TarInfo, str]], Counter]:
+    """Verify archive hash and member safety; metadata-only does not approve extraction."""
     if directory.is_symlink() or not directory.is_dir():
         raise RecoveryError("Recovery-set directory is missing or a symlink")
     manifest = read_manifest(directory)
@@ -171,7 +184,7 @@ def verify_set(directory: Path) -> tuple[list[tuple[tarfile.TarInfo, str]], Coun
     if digest_file(archive) != manifest["sha256"]:
         raise RecoveryError("Archive SHA-256 does not match manifest")
     try:
-        return inspect_members(archive)
+        return inspect_members(archive, metadata_only=metadata_only)
     except (tarfile.TarError, OSError, EOFError) as exc:
         raise RecoveryError("Archive cannot be fully verified") from exc
 
@@ -293,6 +306,9 @@ def validate_stage_target(path: Path) -> Path:
 
 def stage(directory: Path, destination: Path, records: list[tuple[tarfile.TarInfo, str]]) -> None:
     target = validate_stage_target(destination)
+    # Defense in depth: a caller must never pass metadata-only records to the
+    # extraction routine. Always re-run strict link verification independently.
+    records, _ = verify_set(directory)
     old_umask = os.umask(0o077)
     created = False
     try:
@@ -339,6 +355,10 @@ def main() -> int:
         "--diagnose-symlinks", action="store_true",
         help="Read-only aggregate symlink diagnosis; never approves staging",
     )
+    parser.add_argument(
+        "--metadata-only", action="store_true",
+        help="Verify checksum, member paths/types/limits, but never certify symlinks for extraction",
+    )
     parser.add_argument("--stage-dir", type=Path, help="NEW private destination below /tmp or /var/tmp")
     parser.add_argument(
         "--acknowledge-sensitive-data",
@@ -347,10 +367,26 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
-        if args.diagnose_symlinks:
+        if args.diagnose_symlinks or args.metadata_only:
+            if args.diagnose_symlinks and args.metadata_only:
+                raise RecoveryError("Select one read-only inspection mode")
             if args.stage_dir or args.acknowledge_sensitive_data:
-                raise RecoveryError("Diagnosis cannot be combined with staging")
-            print(json.dumps(diagnose_symlinks(args.recovery_set), indent=2, sort_keys=True))
+                raise RecoveryError("Read-only inspection cannot be combined with staging")
+            if args.diagnose_symlinks:
+                print(json.dumps(diagnose_symlinks(args.recovery_set), indent=2, sort_keys=True))
+            else:
+                _, counts = verify_set(args.recovery_set, metadata_only=True)
+                print(json.dumps({
+                    "mode": "metadata-only",
+                    "manifest_sha256_and_size": "pass",
+                    "member_paths_types_and_limits": "pass",
+                    "symlink_targets_validated_for_extraction": False,
+                    "safe_to_stage": False,
+                    "entries": counts["entries"],
+                    "regular_files": counts["regular_files"],
+                    "symlinks": counts["symlinks"],
+                    "directories": counts["directories"],
+                }, sort_keys=True, indent=2))
             return 0
         if bool(args.stage_dir) != args.acknowledge_sensitive_data:
             raise RecoveryError("--stage-dir and --acknowledge-sensitive-data must be used together")
