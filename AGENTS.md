@@ -100,7 +100,8 @@ Once corresponding files exist, expected checks include:
 
 ```bash
 docker compose config
-caddy validate --config <Caddyfile> --adapter caddyfile
+# Caddy edge only: caddy validate --config <Caddyfile> --adapter caddyfile
+# Nginx edge only: nginx -t -c <nginx.conf>
 ```
 
 Add Terraform validation only if Terraform is actually introduced. Report unavailable checks honestly;
