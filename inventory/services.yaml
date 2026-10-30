@@ -44,6 +44,21 @@ services:
     public_redirect_host: s.zolotoy.dev
     internal_port: null
 
+# Host observation: owner-provided read-only diagnostics, not independent SSH verification.
+observed_web_vps:
+  observed_on: 2026-10-31
+  os: Ubuntu 26.04.1 LTS
+  architecture: x86_64
+  ram_mib: 956
+  root_disk_gib_approx: 9.8
+  swap: none
+  active_web_server: nginx
+  inactive_web_server: caddy
+  docker: not-installed
+  tls_renewal: certbot-timer-observed-coverage-unverified
+  backup_status: timers-observed-restore-unverified
+  public_dns: unverified
+
 infrastructure:
   repository: Officialsayp/zolotoy-dev-infra
   deployment_status: not-deployed
