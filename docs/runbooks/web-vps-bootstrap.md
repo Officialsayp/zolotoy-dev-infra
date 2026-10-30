@@ -113,7 +113,9 @@ a universal production protection mechanism.
 
 For a separately approved, pre-cutover Nginx config installation and rollback,
 see [reviewed Nginx restore](nginx-reviewed-restore.md). It does not
-restore TLS keys or manage systemd.
+restore TLS keys or manage systemd. Verify the relevant backup metadata with
+[offline Certbot/systemd review](certbot-systemd-recovery.md) before any
+separately authorized activation.
 
 Reference: [portable VPS disaster recovery](portable-vps-migration.md) and
 [observed backup/recovery evidence](../backups.md).
