@@ -37,9 +37,12 @@ def fixtures() -> tuple[dict[str, tuple[bytes, int, int]], dict[str, str]]:
         0o750, 0
     )
     for base, script in review.BACKUP_SERVICES.items():
+        # Synthetic guess for test fixture ONLY; unknown real ExecStart remains
+        # unresolved in the audit, irrespective of this placeholder string.
+        sample_exec = f"/{script}" if script else "/usr/local/sbin/site-recovery.py check"
         files[f"etc/systemd/system/{base}.service"] = (
             (f"[Unit]\nDescription=Example\n[Service]\n"
-             f"Type=oneshot\nExecStart=/{script}\n").encode(),
+             f"Type=oneshot\nExecStart={sample_exec}\n").encode(),
             0o644, 0
         )
         files[f"etc/systemd/system/{base}.timer"] = (
@@ -47,7 +50,8 @@ def fixtures() -> tuple[dict[str, tuple[bytes, int, int]], dict[str, str]]:
              f"OnCalendar=daily\nUnit={base}.service\n").encode(),
             0o644, 0
         )
-        files[script] = (b"#!/bin/sh\nexit 0\n", 0o750, 0)
+        if script is not None:
+            files[script] = (b"#!/bin/sh\nexit 0\n", 0o750, 0)
     return files, links
 
 
@@ -95,7 +99,13 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
 
     def test_all_synthetic_components_present_and_valid(self):
         result = self.run_review()
-        self.assertTrue(result["static_review_complete"])
+        self.assertTrue(result["known_scope_checks_pass"])
+        self.assertFalse(result["static_review_complete"])
+        self.assertEqual(
+            result["systemd"]["execstart_manual_review_needed_for"],
+            ["maxzolotoy-restic-check"],
+        )
+        self.assertIsNone(result["systemd"]["backup_units"][1]["service_references_expected_script"])
         self.assertFalse(result["safe_to_apply_without_further_review"])
         self.assertEqual(len(result["certbot"]["renewal_profiles"]), 5)
         self.assertTrue(all(row["live_privkey_present"] for row in result["certbot"]["certificate_paths"]))
@@ -153,6 +163,34 @@ class ReviewCertbotSystemdTest(unittest.TestCase):
         data, mode, uid = files[review.HOOK]
         files[review.HOOK] = (data + b"if then\n", mode, uid)
         self.assertFalse(self.run_review(files, links)["certbot"]["deploy_hook"]["posix_syntax_pass"])
+
+    def test_extra_hook_command_prevents_positive_known_scope(self):
+        files, links = fixtures()
+        content, mode, uid = files[review.HOOK]
+        files[review.HOOK] = (
+            content.replace(b"fi\n", b"fi\n/usr/bin/curl https://example.invalid/\n"),
+            mode, uid
+        )
+        report = self.run_review(files, links)
+        self.assertTrue(report["certbot"]["deploy_hook"]["posix_syntax_pass"])
+        self.assertFalse(report["certbot"]["deploy_hook"]["only_expected_hook_commands"])
+        self.assertFalse(report["known_scope_checks_pass"])
+
+    def test_missing_set_eu_prevents_positive_known_scope(self):
+        files, links = fixtures()
+        content, mode, uid = files[review.HOOK]
+        files[review.HOOK] = (content.replace(b"set -eu\n", b""), mode, uid)
+        report = self.run_review(files, links)
+        self.assertFalse(report["certbot"]["deploy_hook"]["strict_failure_handling"])
+        self.assertFalse(report["known_scope_checks_pass"])
+
+    def test_restic_check_exec_is_never_assumed_verified(self):
+        report = self.run_review()
+        check_service = report["systemd"]["backup_units"][1]
+        self.assertTrue(check_service["execstart_present"])
+        self.assertTrue(check_service["execstart_requires_manual_review"])
+        self.assertIsNone(check_service["script_regular_file"])
+        self.assertIsNone(check_service["service_references_expected_script"])
 
     def test_missing_backup_timer_marks_review_incomplete(self):
         files, links = fixtures()
