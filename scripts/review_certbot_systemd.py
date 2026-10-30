@@ -354,6 +354,13 @@ def summarize(result: dict[str, Any]) -> dict[str, Any]:
         "static_review_complete": result["static_review_complete"],
         "safe_to_apply_without_further_review": False,
         "failed_known_checks": failed,
+        "webroot_evidence_sources": {
+            source: sum(
+                p.get("webroot_source") == source
+                for p in result["certbot"]["renewal_profiles"]
+            )
+            for source in ("webroot_map", "webroot_path", "missing")
+        },
         "unresolved_manual_reviews": [
             f"systemd.execstart.{name}"
             for name in result["systemd"]["execstart_manual_review_needed_for"]
