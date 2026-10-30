@@ -197,6 +197,10 @@ def review(recovery_set: Path) -> dict[str, Any]:
         p["present"] and p["webroot_authenticator"] and p["expected_webroot"]
         for p in profiles
     )
+    certificate_paths_ok = all(
+        p["live_fullchain_present"] and p["live_privkey_present"]
+        for p in cert_paths
+    )
     hook_ok = all(result["certbot"]["deploy_hook"].values())
     units_ok = all(
         u["service_regular_file"] and u["timer_regular_file"]
@@ -205,7 +209,11 @@ def review(recovery_set: Path) -> dict[str, Any]:
         and u["has_timer_schedule"]
         for u in units
     )
-    result["static_review_complete"] = profiles_ok and hook_ok and units_ok
+    result["static_review_complete"] = (
+        profiles_ok and certificate_paths_ok and hook_ok and units_ok
+        and result["systemd"]["unit_state_inventory_present"]
+        and result["systemd"]["package_inventory_present"]
+    )
     result["safe_to_apply_without_further_review"] = False
     return result
 
