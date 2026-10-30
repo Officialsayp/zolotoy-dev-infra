@@ -9,7 +9,8 @@ REQUIRED = [
     'docs/architecture.md', 'docs/environments.md', 'docs/deployment-plan.md',
     'docs/security.md', 'docs/observability.md', 'docs/backups.md',
     'docs/runbooks/bootstrap-selectel.md', 'docs/runbooks/deploy.md',
-    'docs/runbooks/rollback.md', 'docs/adr/README.md',
+    'docs/runbooks/rollback.md', 'docs/runbooks/portable-vps-migration.md',
+    'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
 SECRET_NAMES = {'.env', 'id_rsa', 'id_ed25519', 'terraform.tfvars'}
