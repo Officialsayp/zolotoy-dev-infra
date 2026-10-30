@@ -8,7 +8,7 @@ operable by one developer.
 
 ```mermaid
 flowchart TB
-    Internet --> C[Caddy :80/:443]
+    Internet --> C[Selected HTTP edge :80/:443]
     C --> O[order-service]
     C --> A[auth-service]
     C --> N[notification-service API]
@@ -38,7 +38,7 @@ implemented.
 
 ### Public edge
 
-Only Caddy exposes host ports 80/443. Public DNS maps service hostnames to the VPS when that service is
+Only the selected Caddy or Nginx edge exposes host ports 80/443. Public DNS maps service hostnames to the VPS when that service is
 ready.
 
 ### Application network
@@ -61,8 +61,8 @@ Initial mapping follows the frontend's existing runtime configuration:
 - `shortener-api.zolotoy.dev` → Shortener management API;
 - `s.zolotoy.dev` → public short-link redirect path.
 
-Caddy can provide automatic HTTPS for domain-based sites when DNS and ports 80/443 are correct. Do not
-publish DNS before the upstream service passes readiness checks.
+The chosen edge must terminate HTTPS and implement certificate renewal according to its validated
+configuration. Do not publish DNS before the upstream service passes readiness checks.
 
 ## Storage ownership
 
