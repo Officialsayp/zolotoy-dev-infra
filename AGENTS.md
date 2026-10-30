@@ -40,6 +40,13 @@ path with explicit acknowledgement. It cannot install live configs, issue certs 
 retrieve S3 secrets. Do not misrepresent synthetic CI tests as a completed clean-host
 restore, or expose/archive extracted private key content in workflow artifacts.
 
+`restore_nginx.py` is a separate **new-host only** operator-approved tool for
+explicit SHA-256-reviewed, non-key Nginx config files. Its default mode is
+read-only. Applying requires root, exact hostname confirmation and absence
+of all existing site `current` pointers. It validates `nginx -t`, retains
+a root-only rollback journal and never reloads Nginx. Certbot private keys,
+systemd activation and live site cutover require separate review.
+
 ## Target principles
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
