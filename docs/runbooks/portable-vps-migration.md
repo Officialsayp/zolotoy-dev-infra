@@ -200,6 +200,14 @@ Redact secrets and private operator data before sharing diagnostics. Preserve ve
 5. **Do not route stateful writes back to stale data**. A database rollback requires a consistency plan, writer isolation and data migration/replication assessment.
 6. Update operational inventory with actual provider, IP/hostnames (not secrets), active Nginx/Caddy configs, deployed SHAs, RPO/RTO and tested restore evidence.
 
+### Protected Restic wrapper dependency audit
+
+After the operator-confirmed bounded static Certbot/systemd review passed on
+2026-10-31, the next stage is the [read-only wrapper dependency inspection](restic-wrapper-dependency-review.md).
+It validates archive script metadata and only lexical indicators. It cannot
+prove runtime backup behavior or independently recover the offsite Restic/S3
+credentials. Do not extract sensitive files or enable timers as part of it.
+
 ## 7. Remaining automation work (do not claim it exists)
 
 Repository CI/CD for both sites is extensive, but a reproducible whole-VPS IaC bootstrap and a tested backend GitOps deploy are **not yet demonstrated**. First backend deployment requires a real Dockerfile/image, readiness endpoint, persistent data contract, and registry choice. Add tested Compose, edge route generation, staged deploy gates, smoke tests and rollback only when a service meets those prerequisites. Do not convert documentation-only services into fictitious running containers.
