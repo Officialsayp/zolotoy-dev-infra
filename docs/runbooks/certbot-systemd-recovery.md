@@ -92,6 +92,25 @@ replace the previously demonstrated isolated Restic **remote** restore, nor
 does it establish clean-host portability or successful future unattended ACME
 renewal.
 
+## Compact read-only report for missing checks
+
+If the full JSON report is too long, use this option from an already-verified
+repository checkout. It prints **only** false known-scope checks and
+unresolved dependencies, with no archived config contents, private key bytes,
+or ExecStart values:
+
+```bash
+python3 -B scripts/review_certbot_systemd.py \
+  /var/backups/site-recovery/20261030T211925.555690Z \
+  --failures-only
+```
+
+A successful process exit means the report was generated; it does **not**
+mean all checks passed. When `known_scope_checks_pass` is false, inspect
+`failed_known_checks`. The separate `unresolved_manual_reviews` list
+contains unknown facts (such as the Restic-check ExecStart) and is **not**
+silently interpreted as a failed script.
+
 ## Controlled Certbot restoration — separate operator approval required
 
 1. Independently recover the Restic password, S3 credentials and DNS control
