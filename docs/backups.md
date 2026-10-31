@@ -1,7 +1,10 @@
 # Backup and restore plan
 
-Status: observed Selectel VPS backup workflow and successful **isolated remote recovery-set restore**
-on 2026-10-31. **Not** a successful clean-host or cross-provider rebuild.
+Status (2026-10-31): operator-confirmed **independent Mac-to-Selectel S3
+snapshot access and four-file Recovery Set restore**, with SHA-256, byte
+length and GZIP integrity checks PASS. This test required no connection to the
+source VPS. **This is not a clean-host or cross-provider website rebuild.**
+The owner has deferred replacement-VPS testing until a second host exists.
 
 ## Confirmed website recovery baseline (owner-supplied evidence)
 
@@ -71,16 +74,34 @@ Redis cache is generally reconstructable and cannot be treated as the sole durab
 copy. Kafka retention cannot replace consistent database backups. Do not turn
 hypothetical backend components into invented running services.
 
-## Remaining acceptance gates
+## Evidence and next-stage priorities without a second VPS
 
-1. Validate remote Restic restore credentials from a **separate trusted machine**
-   without depending on the source VPS and without exposing the secrets.
-2. Rebuild a disposable replacement VPS from verified package/config inventory,
-   site releases and GitHub. Test both websites and staging with their own hostnames
-   and trusted TLS, without modifying production DNS.
-3. Prove automatic Certbot renewal and any required Nginx reload hook.
-4. Test CI/CD deployment to the replacement host, rollback and authorized DNS
-   cutover. Until then, zero-downtime portability is a goal, **not a verified fact**.
+**Passed (operator evidence, 2026-10-31):** independent Mac access to
+encrypted Restic metadata, exact snapshot discovery and isolated retrieval of
+all four protected Recovery Set files. The restored tarball SHA-256 and byte
+count matched its manifest; streaming GZIP check passed. The Mac's temporary
+restore folder was removed. The actual archive contents were not extracted
+into a live filesystem. See
+[independent macOS Restic restore](runbooks/independent-macos-restic-restore.md).
+
+**Current-vps priorities:** inspect the real backup-check and offsite-backup
+timer states/last results, local Recovery Set freshness, disk headroom, public
+TLS renewal schedule and evidence, and whether there is a supported offsite
+retention policy. Do these as bounded, read-only status checks; do not activate
+timers, run backup/check jobs, prune or delete snapshots without separate
+review. See [operational check](runbooks/current-vps-operational-check.md).
+
+**Deferred — no second VPS available or authorized:** clean Ubuntu rebuild,
+full tar symlink classification for staging, Nginx/Certbot/systemd restore,
+both websites and staging end-to-end smoke tests, GitHub deployment to
+replacement host, controlled DNS cutover and rollback. These remain
+**unverified**, not passed or waived. They can resume when a disposable host
+is available, without modifying production.
+
+**Still open on the existing VPS:** observed unattended Certbot renewal,
+non-disruptive deploy/release retention and locking alignment with existing
+GitHub Actions, backup cadence monitoring and S3 retention monitoring.
+No automatic deletion should be implemented as part of a read-only audit.
 
 ## Pre-deploy rule
 
