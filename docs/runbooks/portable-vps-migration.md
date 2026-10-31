@@ -1,6 +1,15 @@
 # Portable VPS migration and disaster recovery
 
-Status: **repository-based procedure, not a live-host audit or a tested bare-metal recovery**. Updated: 2026-10-31.
+Status: **repository-based procedure; no tested bare-metal website recovery**. Updated: 2026-10-31.
+
+**Owner decision (2026-10-31): postpone all steps that require a second VPS.**
+The complete Recovery Set retrieval and SHA-256/GZIP integrity validation
+were independently demonstrated from a FileVault-enabled Mac. The replacement
+server install, staged archive symlink handling, site-serving smoke tests,
+TLS/CI/CD cutover and rollback are **deferred, not passed**. Current priority
+is safe monitoring of existing production-host backup timers, backup freshness,
+disk space, Certbot and deployment release retention. See
+[current-VPS operational check](current-vps-operational-check.md).
 
 Related source-of-truth documents:
 - [saypix recovery runbook](https://github.com/Officialsayp/saypix/blob/main/docs/recovery-runbook.md)
