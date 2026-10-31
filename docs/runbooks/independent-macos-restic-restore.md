@@ -1,15 +1,15 @@
 # Independent Restic S3 access check from macOS
 
-Status (2026-10-31): **independent Mac metadata decryption and target
-snapshot discovery PASS (operator screenshot)**. The owner secured the
-existing Restic password separately from Selectel VPS and supplied S3 keys
-directly to a local Mac session. Mac-only Restic returned
-`Repository accessible: PASS`, `Restic decryption: PASS`,
-`Target snapshot found: True`, `Independent check exit code: 0`
-for the expected snapshot `cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e`.
-No credentials or repository URL were disclosed in the review.
-**Actual snapshot file restore from Mac and clean-host rebuild are still
-unverified.**
+Status (2026-10-31): **both independent Mac Restic access and
+isolated recovery-set file retrieval/integrity gates PASS** (operator terminal
+screenshots). The owner secured the existing Restic password separately
+from Selectel VPS and supplied paired S3 keys directly to a local Mac
+session. No credentials or repository URL were disclosed in the review.
+The four-file Recovery Set was retrieved from the named snapshot to a
+FileVault-protected temporary directory, manifest SHA-256 and archive byte
+count matched, GZIP streaming validation passed, and the temporary folder
+was removed. **The archive was NOT extracted or installed, and clean-host
+whole-site recovery is still untested.**
 
 This test must run **in the local Mac Terminal**, with no VPN/SSH tunnel
 to the source VPS and no reliance on source-VPS credential files.
@@ -161,6 +161,48 @@ that directory with `--no-lock`, confirm manifest size/SHA-256,
 and remove it securely or retain it in protected storage per owner policy.
 Never extract the tarball to / or restore live service paths. Never commit
 the tarball or upload it to ChatGPT or GitHub.
+
+## Gate 2: isolated four-file Recovery Set retrieval — PASS (operator output)
+
+On 2026-10-31 the owner ran a bounded Python-controlled Restic
+`restore` from their Mac, against previously discovered snapshot
+`cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e`,
+selecting only
+`/var/backups/site-recovery/20261030T211925.555690Z`.
+
+The reported test results were:
+
+- `FILEVAULT: PASS`
+- `FOUR_RECOVERY_FILES_PRESENT: True`
+- `ARCHIVE_SHA256_AND_SIZE: PASS`
+- `GZIP_INTEGRITY: PASS`
+- `INDEPENDENT_RECOVERY_SET_RESTORE: PASS`
+- `TEMPORARY_FILES_REMOVED: True`
+- `DR_DATA_RETRIEVAL_CHECK: COMPLETE`
+
+The four recovered files were `recovery.tar.gz`, `manifest.json`,
+`packages.tsv` and `systemd-unit-states.txt`. The script obtained the
+archive's digest and size from the restored manifest, streamed the GZIP
+contents with an expansion cap, and deleted the transient target via
+Python's TemporaryDirectory context. The screenshots contained only
+fixed-status lines, no credentials, repository address, hashes, tar
+contents, or private keys.
+
+**Interpretation:** independence from the source VPS has now been
+demonstrated for *reading/decrypting the snapshot and retrieving these
+four files with matching integrity metadata* on a FileVault-enabled Mac.
+Temporary folder deletion is not a guarantee of cryptographic SSD
+erasure. This evidence does **not** establish safe extraction of the
+underlying tar archive, integrity or compatibility of every OS package,
+running websites, automatic TLS renewal, rebuild of staging, or DNS
+cutover/rollback on a clean VPS.
+
+**Next blocking issue:** metadata-only tar inspection previously found
+absolute external symlinks (primarily systemd), plus a dangling relative
+symlink. The strict extractor deliberately rejects their staging. Before
+any replacement-server attempt, reconcile and classify these entries,
+then implement/test a constrained, non-following extraction policy;
+never relax the current strict extraction gate by ignoring link targets.
 
 ## Evidence and remaining gates
 
