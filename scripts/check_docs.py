@@ -21,6 +21,7 @@ REQUIRED = [
     'scripts/review_backup_wrappers.py', 'tests/test_review_backup_wrappers.py',
     'docs/runbooks/restic-wrapper-dependency-review.md',
     'docs/runbooks/independent-macos-restic-restore.md',
+    'docs/runbooks/current-vps-operational-check.md',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
