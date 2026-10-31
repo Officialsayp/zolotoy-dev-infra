@@ -22,6 +22,7 @@ REQUIRED = [
     'docs/runbooks/restic-wrapper-dependency-review.md',
     'docs/runbooks/independent-macos-restic-restore.md',
     'docs/runbooks/current-vps-operational-check.md',
+    'docs/runbooks/release-retention-audit.md',
     'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
