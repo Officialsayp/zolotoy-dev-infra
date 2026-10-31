@@ -117,6 +117,42 @@ credentials. The `manifest.json` modification time provides a local
 **freshness hint** only; it does not prove that the manifest or its corresponding
 offsite snapshot is valid. It is a metadata query, not backup creation.
 
+## Operator result on existing Selectel VPS (2026-10-31)
+
+The owner ran the read-only operational diagnostic over the six service/timer
+units. Reported `Diagnostic exit code: 0`, SSH stayed open, and
+`production_changes: false`.
+
+- Root filesystem: **5.62 GiB free**, **38.1% used** at observation time.
+- Four local directories with a regular `manifest.json`; the newest manifest
+  modification time was about **3.03 hours** before inspection. File mtime
+  alone does not demonstrate S3 snapshot freshness or complete backup health.
+- All three timers were `loaded`, `enabled` and `active`.
+- `maxzolotoy-offsite-backup.timer`: last reported trigger
+  **2026-10-30 01:30:15 UTC**; next planned trigger
+  **2026-10-31 01:42:42 UTC**. Its oneshot service last reported successful
+  completion at **2026-10-30 21:19:28 UTC** with `ExecMainStatus=0`.
+  The latter does not prove timer-triggered execution because these times differ.
+- `maxzolotoy-restic-check.timer`: last reported trigger
+  **2026-10-25 03:04:05 UTC**; next
+  **2026-11-01 03:26:51 UTC**. Its service reported a successful exit at
+  **2026-10-30 21:19:38 UTC**; this may be separate from the weekly trigger.
+- `certbot.timer`: enabled and active, with next scheduled trigger
+  **2026-10-31 04:32:14 UTC**; no last trigger timestamp in the report.
+  `certbot.service` showed `Result=success`/`ExecMainStatus=0`
+  but no actual `ExecMainExitTimestamp`, therefore no automatic renewal
+  or even a completed timer invocation was established.
+
+**Current assessment:** no low-disk condition or service failure is shown
+by this limited output. The two backup services' last successful *exits*
+are positive but distinct from successful *scheduled runs* and actual
+fresh remote snapshot state. We should observe the next scheduled
+offsite timer, the next Certbot timer, and the next integrity timer
+without manually triggering, restarting, changing units or performing
+a renewal. A timer run still does not guarantee successful certificate
+issuance; assess that separately using renewal status/certificate expiry.
+S3 retention and latest remote snapshot age have not been verified.
+
 ## Interpretation and next operator gates
 
 1. Confirm both actual backup-related timers are enabled/active, and compare
