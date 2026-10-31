@@ -1,8 +1,10 @@
 # Read-only release retention audit — 3 independent site deployment layouts
 
-Status (2026-10-31): GitHub deployment sources reviewed; **no production
-release deletion has been approved**. An operator is separately checking
-systemd timer execution. These are different workstreams.
+Status (2026-10-31): GitHub deployment sources and read-only VPS output reviewed.
+The existing `site-releases-prune.timer` is enabled; the corresponding service
+last ran successfully on 2026-10-25 in `--apply` mode. Its journal contains no
+`DELETE:` entries, so the evidence does not demonstrate any release deletion.
+This review authorizes neither additional deletion nor changes to the live timer.
 
 ## Confirmed from the source repositories
 
@@ -12,9 +14,10 @@ systemd timer execution. These are different workstreams.
 `/var/www/maxzolotoy/current` symlink. Atomic activation uses
 `/var/www/maxzolotoy/releases/.deploy-maxzolotoy.lock` plus flock.
 Its in-workflow deploy stage does not implement broad old-release pruning.
-A comment refers to a VPS release-prune service using the same lock,
-but actual **installation and scheduling** of such a service must be
-observed on the VPS before considering it active.
+The existing VPS release-prune timer and its successful execution are now
+confirmed by owner-supplied `systemctl` and `journalctl` output. Its service
+reported `Deployment lock: ACQUIRED`; exact on-server lock path and deployment
+compatibility require a complete script/unit inspection before modifications.
 
 **zolotoy.dev production — Officialsayp/zolotoy-dev-frontend**:
 `scripts/selectel/production-remote.py` uses
@@ -22,9 +25,10 @@ observed on the VPS before considering it active.
 `/var/www/zolotoy-dev-production/current`, and the lock
 `/var/www/zolotoy-dev-production/releases/.deploy-production.lock`.
 It includes an explicit manifest-verified rollback transaction.
-`docs/deployment/SELECTEL_PRODUCTION.md` explicitly says old
-releases are retained and **no release pruning occurs** before a
-separate retention policy is approved.
+`docs/deployment/SELECTEL_PRODUCTION.md` historically says old
+releases are retained and no release pruning occurs before a separate
+retention policy is approved. That source description is now stale relative
+to the confirmed active VPS prune timer; reconcile it before changing behavior.
 
 **zolotoy.dev staging — Officialsayp/zolotoy-dev-frontend**:
 `scripts/selectel/remote.sh` uses
@@ -40,9 +44,10 @@ merely because it starts with a dot.
 active-link locations and rollback semantics differ. Do not deploy a
 generic `find -mtime -delete` or one shared global pruning service.
 The existence of a lockfile does not prove no deployment is currently
-running. A cleanup tool would have to *acquire the same lock* before
-making any change, then revalidate active/protected targets and verify
-rollback inventory. No such cleanup is authorized here.
+running. The existing cleanup reports successful lock acquisition for both
+production sites, but full lock path matching to each CI deploy workflow was
+not independently established by the supplied truncated script output.
+Do not add, change or manually trigger cleanup on the strength of this audit.
 
 ## Owner-run operator inventory — no deletion and no remote job trigger
 
@@ -171,9 +176,27 @@ observation is a point-in-time, potentially racing snapshot. A previously
 archived older release or currently active release must **never** be
 deleted merely because a count exceeds a retention target.
 
-## Retention decision pending
+## Observed production retention and remaining safety conditions
 
-Before creating a cleanup mechanism on any of the sites, confirm:
+Owner-supplied 2026-10-31 evidence:
+- Old `maxzolotoy-release-cleanup.timer`: `disabled`; new
+  `site-releases-prune.timer`: `enabled`, with its next scheduled run on
+  2026-11-01 around 04:20 UTC.
+- Successful 2026-10-25 `--apply` journal: both production sites reported
+  `Deployment lock: ACQUIRED`, one protected release each, `KEEP NEWEST: 5`,
+  and `MINIMUM AGE: 30 days`; no `DELETE:` messages appeared.
+- The script excerpt also checks protected release IDs, symlink pointers,
+  filesystem change-time age and rechecks `current` before removal.
+- Counts on 2026-10-25 were 10 `maxzolotoy` and 6 `zolotoy.dev production`
+  release directories. The later read-only inventory counted 17 and 9,
+  respectively, with valid `current` pointers. Staging had one release,
+  plus one `.incoming-*` and one `.metadata-*` directory (both timestamped
+  2026-10-18); staging is not covered by the observed two-site prune log.
+- A successful `--apply` run with no deletion is **not** a demonstrated safe
+  deletion, rollback rehearsal, or permission for additional removal.
+
+Before modifying existing cleanup, extending it to staging, or approving
+additional deletion, confirm:
 1. Actual on-server inventory, active symlinks and root ownership.
 2. At least an explicitly chosen rollback set per site, not an ungrounded
    generic count; protect active release and any release referenced by
