@@ -1,9 +1,15 @@
 # Independent Restic S3 access check from macOS
 
-Status (2026-10-31): **runbook prepared, not yet operator-tested on Mac**.
-The owner reported that the existing Restic decryption password was saved
-outside the Selectel VPS in a password manager, and that S3 keys are available.
-No independent S3 access or off-host restore is confirmed yet.
+Status (2026-10-31): **independent Mac metadata decryption and target
+snapshot discovery PASS (operator screenshot)**. The owner secured the
+existing Restic password separately from Selectel VPS and supplied S3 keys
+directly to a local Mac session. Mac-only Restic returned
+`Repository accessible: PASS`, `Restic decryption: PASS`,
+`Target snapshot found: True`, `Independent check exit code: 0`
+for the expected snapshot `cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e`.
+No credentials or repository URL were disclosed in the review.
+**Actual snapshot file restore from Mac and clean-host rebuild are still
+unverified.**
 
 This test must run **in the local Mac Terminal**, with no VPN/SSH tunnel
 to the source VPS and no reliance on source-VPS credential files.
@@ -138,6 +144,11 @@ logging raw Restic stderr. If it fails, classify before troubleshooting;
 never paste secret-bearing output. Secrets exist temporarily in the local
 child shell environment and Restic process memory, not in shell history.
 Using a trusted Mac without terminal recording/debug tracing is necessary.
+
+**Gate 1 status (2026-10-31): PASS** on the user's Mac, supported by
+operator-provided terminal output, not by a GitHub Actions connection to
+private S3. The result confirms repository metadata decryption and discovery
+of the exact snapshot only. Do not infer that content packs were downloaded.
 
 ## Gate 2: protected isolated restore (after Gate 1 succeeds)
 
