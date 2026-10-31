@@ -200,13 +200,36 @@ Redact secrets and private operator data before sharing diagnostics. Preserve ve
 5. **Do not route stateful writes back to stale data**. A database rollback requires a consistency plan, writer isolation and data migration/replication assessment.
 6. Update operational inventory with actual provider, IP/hostnames (not secrets), active Nginx/Caddy configs, deployed SHAs, RPO/RTO and tested restore evidence.
 
-### Protected Restic wrapper dependency audit
+### Protected Restic wrapper dependency audit — passed limited scope
 
-After the operator-confirmed bounded static Certbot/systemd review passed on
-2026-10-31, the next stage is the [read-only wrapper dependency inspection](restic-wrapper-dependency-review.md).
-It validates archive script metadata and only lexical indicators. It cannot
-prove runtime backup behavior or independently recover the offsite Restic/S3
-credentials. Do not extract sensitive files or enable timers as part of it.
+On 2026-10-31, the operator ran the
+[read-only wrapper dependency inspection](restic-wrapper-dependency-review.md)
+against the real archive, and all three archived script member metadata
+checks passed. The three live scripts also matched the archived copies by
+SHA-256. The live Restic environment file was root-owned with owner-only
+permissions. Lexical dependency indicators were inventory only; actual
+script behavior remains a separate review gate.
+
+### Independent macOS Restic data retrieval — passed
+
+The owner independently supplied the existing S3 and Restic decryption
+credentials on their MacBook, with no source-VPS SSH dependency, and
+successfully discovered exact snapshot
+`cb709afa632b3cc78616c28f91dfadfc0b385235a503f9db73ed780e7b6fc03e`.
+Subsequent isolated Restic restore retrieved all four Recovery Set files
+under a temporary directory on a FileVault-enabled Mac. The owner-provided
+terminal output confirmed matching archive SHA-256, length, and streamed
+GZIP validity, followed by temporary folder removal. Private archive
+contents were **not** extracted, and secret values were not disclosed.
+See [independent Mac restore evidence](independent-macos-restic-restore.md).
+
+**This closes the original-VPS dependency for the specific encrypted
+snapshot's metadata and Recovery Set file retrieval, not for whole-server
+service restoration.** The remaining blockers include unsafe-to-stage
+absolute/external and dangling tar symlinks, service and package
+dependencies, both websites and staging routes, Certbot renewal, CI/CD
+and clean-host cutover/rollback. Do not alter the live server or loosen
+archive extraction guards to shortcut these gates.
 
 ## 7. Remaining automation work (do not claim it exists)
 
