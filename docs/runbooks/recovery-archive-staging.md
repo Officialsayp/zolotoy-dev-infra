@@ -1,8 +1,11 @@
 # Verified recovery archive — offline inspection and private staging
 
-Status (2026-10-31): **synthetic offline CI tests**, plus separately reported
-successful remote Restic recovery-set retrieval. The restoration script has
-**not** been run against a production backup or on a clean replacement VPS.
+Status (2026-10-31): **synthetic offline CI tests** plus an independently
+successful Mac-side download of the real four-file Recovery Set with
+SHA-256/GZIP verification. The inner archive remains unsafe to stage due to
+unresolved symlinks. Owner has **deferred all replacement-VPS deployment
+steps** until a second host is available; this is not a waiver of the gate.
+The staging script has not been run against the actual protected tarball.
 This procedure does NOT automatically make an existing website live.
 
 ## Why another stage exists
