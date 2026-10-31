@@ -29,12 +29,37 @@ Until a backend image exists, keep this repository documentation-first. Do not a
 Compose file full of non-existent images/ports merely to make the tree look complete. Add runnable
 artifacts when they can be validated against real service contracts and health endpoints.
 
+Exception for the observed existing static sites: `iac/web-baseline.yml` provides a guarded,
+**partial** clean-host package/user/directory bootstrap based on real VPS inventory. It does not
+replace the running VPS, deploy any sites or imply the backend is ready. Validate Ansible syntax in CI;
+never apply to a host with existing live release pointers, and require explicit operator consent.
+
+The `scripts/recovery_archive.py` utility validates a **user-provided already-restored**
+Recovery Set and may stage its archive *only* under a fresh private `/tmp` or `/var/tmp`
+path with explicit acknowledgement. It cannot install live configs, issue certs or
+retrieve S3 secrets. Do not misrepresent synthetic CI tests as a completed clean-host
+restore, or expose/archive extracted private key content in workflow artifacts.
+
+`restore_nginx.py` is a separate **new-host only** operator-approved tool for
+explicit SHA-256-reviewed, non-key Nginx config files. Its default mode is
+read-only. Applying requires root, exact hostname confirmation and absence
+of all existing site `current` pointers. It validates `nginx -t`, retains
+a root-only rollback journal and never reloads Nginx. Certbot private keys,
+systemd activation and live site cutover require separate review.
+
+`review_certbot_systemd.py` audits selected metadata from an already verified,
+locally protected Recovery Set without extracting key material, printing raw
+configuration values or executing system services. It must never be extended
+to automatically install TLS private keys, run Certbot renewal, enable timers,
+or modify the live VPS without a separate explicit authorization.
+
 ## Target principles
 
 - Single Selectel VPS + Docker Compose is the first production-like target; Kubernetes/Helm is a
   stretch goal, not a prerequisite.
-- Prefer Caddy for the initial TLS/reverse-proxy edge to reuse the operational model already proven in
-  `Officialsayp/saypix`; do not copy unrelated IPs/domains/secrets from that project.
+- Select the edge after checking the currently installed VPS: source repositories contain both Caddy
+  and Nginx profiles. Reuse the verified active edge, TLS renewal and rollback contract; do not copy
+  unrelated IPs/domains/secrets or migrate the web server merely for consistency.
 - Keep only edge ports public. Databases, Redis, Kafka, internal metrics and admin tooling stay on
   private/internal networks unless explicitly justified.
 - Service repositories remain independently runnable. This repo consumes built images; it does not
@@ -99,7 +124,8 @@ Once corresponding files exist, expected checks include:
 
 ```bash
 docker compose config
-caddy validate --config <Caddyfile> --adapter caddyfile
+# Caddy edge only: caddy validate --config <Caddyfile> --adapter caddyfile
+# Nginx edge only: nginx -t -c <nginx.conf>
 ```
 
 Add Terraform validation only if Terraform is actually introduced. Report unavailable checks honestly;

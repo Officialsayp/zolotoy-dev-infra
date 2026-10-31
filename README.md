@@ -2,9 +2,10 @@
 
 Cross-service integration and deployment infrastructure for the `zolotoy.dev` backend portfolio.
 
-This repository is intentionally **documentation-first at bootstrap time**. The Go service repositories
-and production Selectel backend environment do not exist yet, so this initial commit does not pretend
-that a runnable production Compose stack or deployment workflow has already been validated.
+This repository remains **documentation-first for backend deployment**. The Go Order service now exists
+inside `Officialsayp/zolotoy-dev-backend`, but no production backend image, validated Compose stack or
+GitOps deploy has been established. The static sites already have independent Selectel-related CI/CD;
+do not duplicate their working deployment workflows.
 
 ## Ownership
 
@@ -24,14 +25,15 @@ Individual service repositories continue to own their own `Dockerfile`, migratio
 
 ## Current state
 
-As of 2026-09-06:
+As of 2026-10-31, repository inspection plus owner-provided read-only Selectel VPS diagnostics establish:
 
-- `zolotoy-dev-frontend` is implemented and deployed through Cloudflare in the current project cycle;
-- backend repositories are not yet created;
-- no active `zolotoy.dev` Selectel backend deployment is claimed;
-- this repo contains the accepted deployment direction and runbook scaffolding only.
+- `zolotoy-dev-frontend` has implemented Selectel production/staging workflows; the observed VPS actively serves Nginx and locally verified HTTPS staging, while public DNS is not independently verified;
+- `zolotoy-dev-backend` contains an in-development Order service, while Auth, Notification and Shortener remain planned;
+- there is still no verified backend production Compose, registry image or deploy workflow in this repository;
+- a **gated Ansible phase-one web VPS baseline** installs known Nginx/Certbot/Restic packages and deployment users only on an approved, empty Ubuntu 26.04 host. It is not a complete site recovery or provider provisioning.
+- see [portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md) before moving either site.
 
-The first active Compose/Caddy/deployment files should be added when there is at least one published,
+The first active Compose/edge/deployment files should be added when there is at least one published,
 smoke-testable backend service image.
 
 ## Planned edge topology
@@ -47,11 +49,11 @@ shortener-api.zolotoy.dev     -> url-shortener management API
 s.zolotoy.dev                 -> url-shortener public redirect path
 ```
 
-Caddy is the preferred first edge because the existing `saypix`/`maxzolotoy.com` VPS workflow already
-uses it successfully, and Caddy provides automatic HTTPS and reverse proxying. This is a project
-operational reuse decision, not a requirement imposed on the Go services.
+The backend reverse proxy decision remains conditional on a live VPS audit: both Caddy and Nginx
+profiles exist in the website repos. Reuse the currently validated edge and its TLS/deploy contract;
+do not force a migration solely to introduce backend services.
 
-Only Caddy should expose public `80/443` on the single-VPS baseline. PostgreSQL, Redis, Kafka,
+Only the selected HTTP(S) edge (Caddy or Nginx) should expose public `80/443` on the single-VPS baseline. PostgreSQL, Redis, Kafka,
 Prometheus metrics endpoints and service container ports remain internal unless an explicit
 operational requirement says otherwise.
 
@@ -85,22 +87,40 @@ first production workflow is added.
 - [Observability](docs/observability.md)
 - [Backup and restore plan](docs/backups.md)
 - [Bootstrap Selectel runbook](docs/runbooks/bootstrap-selectel.md)
+- [Gated web VPS Ansible bootstrap](docs/runbooks/web-vps-bootstrap.md)
+- [Offline recovery archive validation and private staging](docs/runbooks/recovery-archive-staging.md)
+- [Guarded reviewed Nginx configuration restore](docs/runbooks/nginx-reviewed-restore.md)
+- [Offline Certbot/systemd recovery evidence](docs/runbooks/certbot-systemd-recovery.md)
+- [Offline Restic backup wrapper and credential dependency review](docs/runbooks/restic-wrapper-dependency-review.md)
+- [Independent macOS Restic access and Recovery Set validation](docs/runbooks/independent-macos-restic-restore.md)
+- [Read-only current VPS backup/timer/disk operational audit](docs/runbooks/current-vps-operational-check.md)
+- [Read-only release inventory and rollback-safe retention review](docs/runbooks/release-retention-audit.md)
+- [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
+- [Portable VPS migration and recovery](docs/runbooks/portable-vps-migration.md)
 - [ADRs](docs/adr/README.md)
 - [Research references](docs/references.md)
 - [Service inventory](inventory/services.yaml)
 
 ## Verification
 
-This bootstrap has no runtime dependencies. Check repository integrity with:
+Repository documentation validation uses Python; the **web VPS baseline syntax check** additionally uses pinned Ansible Core on the CI runner. Check with:
 
 ```bash
 python scripts/check_docs.py
+python3 -m venv .venv
+.venv/bin/python -m pip install -r iac/requirements.txt
+.venv/bin/ansible-playbook --syntax-check iac/web-baseline.yml
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 -m py_compile scripts/recovery_archive.py
+python3 -m py_compile scripts/restore_nginx.py
+python3 -m py_compile scripts/review_certbot_systemd.py
+python3 -m py_compile scripts/review_backup_wrappers.py
 git diff --check
 ```
 
-When active Compose/Caddy/Terraform files are introduced, extend verification in the same change
+When active Compose/edge/IaC files are introduced, extend verification in the same change
 (e.g. `docker compose config`, `caddy validate`, `terraform validate`) and document the exact command.
 
 ## No secrets in Git

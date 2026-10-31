@@ -3,6 +3,11 @@
 - Status: Accepted for the first backend deployment
 - Date: 2026-09-06
 
+> **Revalidation note (2026-10-31):** This records the original preferred first backend edge, not a
+> verified description of today's VPS. Both Caddy and Nginx profiles now exist in site repositories.
+> Preserve the accepted historical decision; selecting a different active backend edge requires a
+> live-state audit and a new superseding ADR, not an implicit rewrite of this record.
+
 ## Context
 
 The frontend environment template already declares separate public base URLs for Order, Auth,

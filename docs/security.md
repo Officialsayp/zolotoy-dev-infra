@@ -21,7 +21,7 @@ files remain sensitive and should be stored outside the repository with restrict
 
 Default-deny by design:
 
-- public: Caddy 80/443;
+- public: selected HTTP(S) edge (Caddy or Nginx) on 80/443;
 - private/internal: Go service ports, PostgreSQL, Redis, Kafka, Prometheus scrape endpoints;
 - local/admin only: Grafana unless authenticated/restricted, Kafka UI, Mailpit, Portainer if ever used.
 
@@ -29,9 +29,10 @@ Do not use `0.0.0.0` host publishing for a data/admin service by convenience.
 
 ## TLS
 
-Caddy automatic HTTPS is the initial edge plan. Do not disable upstream TLS verification when proxying
-to an HTTPS upstream. Inside one controlled Docker network, plaintext HTTP from Caddy to the service can
-be preferable to fake HTTPS with verification disabled.
+Use the HTTP edge and renewal mechanism validated against the actual VPS (Caddy automatic HTTPS or
+Nginx with a separately managed certificate lifecycle). Never disable TLS verification for HTTPS
+upstreams. Plain HTTP inside a restricted Docker application network is preferable to pretend HTTPS
+with verification disabled, where it matches the threat model.
 
 ## CI/CD
 
@@ -44,5 +45,5 @@ Infrastructure does not replace application controls:
 
 - Auth owns cookie/JWT/CSRF/session security;
 - services own authorization and input validation;
-- Caddy is not the authority for business RBAC;
+- the HTTP reverse proxy is not the authority for business RBAC;
 - frontend route guards are not backend authorization.

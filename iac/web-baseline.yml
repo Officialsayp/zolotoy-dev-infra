@@ -1,0 +1,114 @@
+---
+# Phase 1 of recovery for a NEW, EMPTY VPS only.
+# It must never be used to modify the running production Selectel host.
+# No secrets, Caddy, Docker, live site config, TLS issuance, firewall activation,
+# DNS updates, service restarts, or release switching are managed here.
+- name: Prepare a clean Ubuntu web recovery host
+  hosts: web_recovery
+  gather_facts: true
+  become: true
+
+  vars:
+    web_baseline_packages:
+      - ca-certificates
+      - certbot
+      - coreutils
+      - curl
+      - git
+      - gzip
+      - libnginx-mod-http-headers-more-filter
+      - libnginx-mod-http-js
+      - libnginx-mod-stream
+      - nginx
+      - nginx-common
+      - openssh-server
+      - openssl
+      - python3
+      - python3-apt
+      - restic
+      - tar
+      - ufw
+      - util-linux
+
+  pre_tasks:
+    - name: Require explicit operator authorization except during check mode
+      ansible.builtin.assert:
+        that:
+          - ansible_check_mode or (web_bootstrap_approved | default(false) | bool)
+        fail_msg: >-
+          Refusing to bootstrap: use only on a new disposable host and pass
+          -e web_bootstrap_approved=true after reviewing the inventory.
+
+    - name: Require the tested operating system family and architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['distribution'] == 'Ubuntu'
+          - ansible_facts['distribution_version'] is version('26.04', '==')
+          - ansible_facts['architecture'] == 'x86_64'
+        fail_msg: >-
+          This baseline is for Ubuntu 26.04 x86_64 only.
+          Reassess package availability and site recovery on another image.
+
+    - name: Inspect site pointers before making any changes
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - /var/www/maxzolotoy/current
+        - /var/www/zolotoy-dev-production/current
+        - /var/www/zolotoy-dev/releases/current
+      register: web_active_pointers
+
+    - name: Refuse to modify a host with existing live site pointers
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: >-
+          Site pointer {{ item.item }} already exists. This playbook must
+          not run on an active or partly recovered website host.
+      loop: "{{ web_active_pointers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+  tasks:
+    - name: Install the baseline packages without full OS upgrade
+      ansible.builtin.apt:
+        name: "{{ web_baseline_packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+        install_recommends: false
+        fail_on_autoremove: true
+
+    - name: Create locked, unprivileged site deployment identities
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: present
+        create_home: true
+        shell: /bin/bash
+        password_lock: true
+      loop:
+        - zolotoydeploy
+        - zolotoyprod
+
+    - name: Create safe parent directories for reviewed site restoration
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: /var/www/zolotoy-dev, owner: root, mode: '0755' }
+        - { path: /var/www/zolotoy-dev/releases, owner: zolotoydeploy, mode: '0755' }
+        - { path: /var/www/zolotoy-dev-production, owner: zolotoyprod, mode: '0755' }
+        - { path: /var/www/zolotoy-dev-production/releases, owner: zolotoyprod, mode: '0755' }
+        - { path: /var/backups/site-recovery, owner: root, mode: '0700' }
+
+    - name: Explain remaining restoration stages
+      ansible.builtin.debug:
+        msg: >-
+          Package/user/directory baseline only. Restore reviewed configuration
+          and site data in a separate approved stage; provision HTTPS and
+          deploy identities, validate nginx -t, and smoke test before DNS cutover.
+          Nginx may start with the distribution default on package installation.

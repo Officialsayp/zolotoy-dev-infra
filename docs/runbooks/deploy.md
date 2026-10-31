@@ -29,7 +29,7 @@ Do not stop at container state. Verify:
 
 - Compose container health;
 - each deployed service readiness endpoint;
-- Caddy/TLS for the public hostname;
+- the verified active HTTP(S) edge and TLS for the public hostname;
 - representative API request;
 - Kafka/DB/Redis dependency health where relevant;
 - Prometheus target health after observability exists.

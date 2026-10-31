@@ -1,0 +1,38 @@
+---
+# Observation from authorized read-only Selectel VPS diagnostics on 2026-10-31.
+# NOT package pins or a claim of exact versions on a replacement host.
+schema_version: 1
+observed_on: '2026-10-31'
+source: owner-provided-vps-commands
+os: Ubuntu 26.04.1 LTS
+architecture: x86_64
+packages:
+  nginx: '1.28.3-2ubuntu1.12'
+  nginx-common: '1.28.3-2ubuntu1.12'
+  libnginx-mod-http-js: '0.9.4-1build2'
+  libnginx-mod-http-headers-more-filter: '1:0.39-2build3'
+  certbot: '4.0.0-4'
+  restic: '0.18.1-3ubuntu1'
+  caddy: '2.11.7'
+  ufw: '0.36.2-9build1'
+nginx_loaded_modules:
+  - ngx_http_headers_more_filter_module.so
+  - ngx_http_js_module.so
+  - ngx_stream_module.so
+deployment_users_observed:
+  - zolotoydeploy
+  - zolotoyprod
+binary_paths_observed:
+  python3: /usr/bin/python3
+  curl: /usr/bin/curl
+  git: /usr/bin/git
+  flock: /usr/bin/flock
+  tar: /usr/bin/tar
+  sha256sum: /usr/bin/sha256sum
+recovery_notes:
+  active_http_server: nginx
+  caddy_active: false
+  docker_installed: false
+  certificates: certbot
+  restic: offsite-snapshot-isolated-restore-passed
+  staging: existing-but-not-in-recovery-set

@@ -1,49 +1,70 @@
 schema_version: 1
 project: zolotoy-dev
-snapshot_date: 2026-09-06
+snapshot_date: 2026-10-31
 
+# Repository state plus owner-supplied read-only VPS evidence. Public DNS and clean-host rebuild remain unverified.
 services:
   frontend:
     repository: Officialsayp/zolotoy-dev-frontend
     canonical_name: zolotoy-dev-frontend
     status: implemented
     public_url: https://zolotoy.dev
-    current_hosting: cloudflare
+    current_hosting: selectel-vps-nginx-operator-observed
+    deployment_code: selectel-production-and-staging
     runtime_mode: mock-first
 
   order:
-    repository: Officialsayp/order-service
+    repository: Officialsayp/zolotoy-dev-backend
+    source_path: services/order-service
     canonical_name: order-service
-    status: planned
+    status: in-development
     public_api_host: order-api.zolotoy.dev
     internal_port: null
+    deployment_status: not-deployed
 
   auth:
-    repository: Officialsayp/auth-service
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: auth-service
     status: planned
     public_api_host: auth-api.zolotoy.dev
     internal_port: null
 
   notification:
-    repository: Officialsayp/notification-service
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: notification-service
     status: planned
     public_api_host: notification-api.zolotoy.dev
     internal_port: null
 
   shortener:
-    repository: Officialsayp/url-shortener
+    repository: Officialsayp/zolotoy-dev-backend
     canonical_name: url-shortener
     status: planned
     public_api_host: shortener-api.zolotoy.dev
     public_redirect_host: s.zolotoy.dev
     internal_port: null
 
+# Host observation: owner-provided read-only diagnostics, not independent SSH verification.
+observed_web_vps:
+  observed_on: 2026-10-31
+  os: Ubuntu 26.04.1 LTS
+  architecture: x86_64
+  ram_mib: 956
+  root_disk_gib_approx: 9.8
+  swap: none
+  active_web_server: nginx
+  inactive_web_server: caddy
+  docker: not-installed
+  tls_renewal: certbot-five-certs-timer-hook-reviewed-renewal-not-yet-proven
+  backup_status: restic-offsite-snapshot-isolated-recovery-set-restore-passed
+  staging: symlink-present-local-https-200-not-in-recovery-archive
+  certbot_hook: root-owned-executable-sh-syntax-passed-real-execution-unverified
+  public_dns: unverified
+
 infrastructure:
   repository: Officialsayp/zolotoy-dev-infra
   deployment_status: not-deployed
   target_provider: Selectel
   target_runtime: docker-compose-single-vps
-  edge: caddy
+  edge: nginx-on-observed-web-vps-backend-placement-pending
   container_registry: decision-pending

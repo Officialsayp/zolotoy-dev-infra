@@ -2,10 +2,10 @@
 
 ## Why no deploy workflow is committed yet
 
-There are no backend repositories or published backend images at bootstrap time. A deployment workflow
-now would necessarily contain invented image names, ports, health paths or credentials. This repository
-therefore starts with the process and ownership model; executable deployment is added with the first
-real service image.
+The backend repository now exists (`Officialsayp/zolotoy-dev-backend`) with a developing Order service,
+but no validated production backend image or ready-to-deploy Compose contract is recorded here. A live
+workflow today would require inventing image digests, readiness behavior or infrastructure credentials.
+Keep deployment documentation and review gates until the first real service image and contract are verified.
 
 ## Image lifecycle
 
@@ -30,12 +30,12 @@ Docker recommends environment-specific Compose overrides for production. The eve
 prefer a base integration definition plus a production override rather than host bind-mounting source
 code into production containers.
 
-Expected active files **later**, not placeholders now:
+Expected active files **later**, not placeholders now (use Nginx instead of Caddy if the live edge audit establishes that choice):
 
 ```text
 compose.yaml
 compose.production.yaml
-deploy/caddy/Caddyfile
+deploy/<selected-edge>/validated-config
 observability/prometheus/prometheus.yml
 observability/grafana/provisioning/...
 ```
@@ -44,7 +44,7 @@ Add only the files that can be validated against real images/config.
 
 ## GitHub Actions baseline
 
-When deployment automation is introduced:
+When deployment automation is introduced (the two existing website deployment workflows are separate and must not be duplicated):
 
 - `permissions: contents: read` unless more is genuinely needed;
 - use a GitHub Environment named `production` for production secrets/gates;

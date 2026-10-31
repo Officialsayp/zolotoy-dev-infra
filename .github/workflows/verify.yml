@@ -1,0 +1,35 @@
+name: Verify infrastructure repository
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate documentation, links, inventory safety and secret-file rules
+        run: python3 scripts/check_docs.py
+      - name: Validate Ansible baseline syntax (no remote connection)
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/infra-ansible"
+          "$RUNNER_TEMP/infra-ansible/bin/python" -m pip install --disable-pip-version-check -r iac/requirements.txt
+          "$RUNNER_TEMP/infra-ansible/bin/ansible-playbook" --syntax-check iac/web-baseline.yml
+      - name: Verify recovery-set archive inspector and malicious-input tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          python3 -m py_compile scripts/recovery_archive.py
+          python3 -m py_compile scripts/restore_nginx.py
+          python3 -m py_compile scripts/review_certbot_systemd.py
+          python3 -m py_compile scripts/review_backup_wrappers.py
+      - name: Check whitespace errors in latest change
+        run: git diff --check HEAD^ HEAD

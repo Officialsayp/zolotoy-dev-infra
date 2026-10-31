@@ -9,7 +9,21 @@ REQUIRED = [
     'docs/architecture.md', 'docs/environments.md', 'docs/deployment-plan.md',
     'docs/security.md', 'docs/observability.md', 'docs/backups.md',
     'docs/runbooks/bootstrap-selectel.md', 'docs/runbooks/deploy.md',
-    'docs/runbooks/rollback.md', 'docs/adr/README.md',
+    'docs/runbooks/rollback.md', 'docs/runbooks/portable-vps-migration.md',
+    'docs/runbooks/web-vps-bootstrap.md', 'inventory/web-vps-observed-packages.yaml',
+    'iac/web-baseline.yml', 'iac/requirements.txt',
+    'scripts/recovery_archive.py', 'tests/test_recovery_archive.py',
+    'docs/runbooks/recovery-archive-staging.md',
+    'docs/runbooks/nginx-reviewed-restore.md', 'scripts/restore_nginx.py',
+    'tests/test_restore_nginx.py',
+    'scripts/review_certbot_systemd.py', 'tests/test_review_certbot_systemd.py',
+    'docs/runbooks/certbot-systemd-recovery.md',
+    'scripts/review_backup_wrappers.py', 'tests/test_review_backup_wrappers.py',
+    'docs/runbooks/restic-wrapper-dependency-review.md',
+    'docs/runbooks/independent-macos-restic-restore.md',
+    'docs/runbooks/current-vps-operational-check.md',
+    'docs/runbooks/release-retention-audit.md',
+    'docs/adr/README.md',
 ]
 LINK_RE = re.compile(r'(?<!!)\[[^\]]+\]\(([^)]+)\)')
 SECRET_NAMES = {'.env', 'id_rsa', 'id_ed25519', 'terraform.tfvars'}
