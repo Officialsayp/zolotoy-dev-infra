@@ -170,6 +170,9 @@ S3 retention and latest remote snapshot age have not been verified.
 5. For deployment release cleanup, review the actual saypix and zolotoy.dev
    GitHub Actions concurrency locks, active `current` links, rollback
    requirements, and any cleanup script *before* proposing auto-deletion.
+   An initial source review has documented three different lock schemes,
+   rollback layouts and a safe inventory command in
+   [the release retention audit](release-retention-audit.md).
    Keep the original host untouched during this review.
 6. Once a separate test VPS is available, resume the postponed isolated
    symlink/host restoration, deploy, TLS, DNS and rollback rehearsal. That
