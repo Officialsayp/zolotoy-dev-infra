@@ -94,6 +94,7 @@ first production workflow is added.
 - [Offline Restic backup wrapper and credential dependency review](docs/runbooks/restic-wrapper-dependency-review.md)
 - [Independent macOS Restic access and Recovery Set validation](docs/runbooks/independent-macos-restic-restore.md)
 - [Read-only current VPS backup/timer/disk operational audit](docs/runbooks/current-vps-operational-check.md)
+- [Read-only release inventory and rollback-safe retention review](docs/runbooks/release-retention-audit.md)
 - [Observed web VPS package versions](inventory/web-vps-observed-packages.yaml)
 - [Deployment runbook](docs/runbooks/deploy.md)
 - [Rollback runbook](docs/runbooks/rollback.md)
